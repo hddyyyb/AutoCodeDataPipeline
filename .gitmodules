@@ -1,0 +1,3 @@
+[submodule "codebase/third_party/fastapi-rbac-template"]
+	path = codebase/third_party/fastapi-rbac-template
+	url = https://github.com/alhytham-tech/fastapi-project-template
