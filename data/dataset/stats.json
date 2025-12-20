@@ -1,0 +1,52 @@
+{
+  "generated_at": "E:\\Reasarch\\_7_工作\\__汇丰银行\\code\\AutoCodeDataPipeline",
+  "repo_index_chunks": 3408,
+  "qa": {
+    "before_dedup": 124,
+    "after_dedup": 124,
+    "removed": 0,
+    "metrics": {
+      "count": 124,
+      "language_dist": {
+        "en": 62,
+        "zh": 62
+      },
+      "domain_dist": {
+        "mixed": 82,
+        "order": 42
+      },
+      "qa_type_dist": {
+        "rule": 120,
+        "flow": 4
+      },
+      "difficulty_dist": {
+        "medium": 120,
+        "hard": 4
+      },
+      "evidence_avg": 1.016,
+      "trace_steps_avg": 3.0
+    }
+  },
+  "design": {
+    "before_dedup": 4,
+    "after_dedup": 3,
+    "removed": 1,
+    "metrics": {
+      "count": 3,
+      "language_dist": {
+        "zh": 3
+      },
+      "domain_dist": {
+        "order": 2,
+        "stock": 1
+      },
+      "difficulty_dist": {
+        "hard": 1,
+        "medium": 1,
+        "easy": 1
+      },
+      "evidence_avg": 3.0,
+      "trace_steps_avg": 5.0
+    }
+  }
+}

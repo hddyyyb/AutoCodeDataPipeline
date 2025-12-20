@@ -1,0 +1,77 @@
+#repo路径+只做订单/库存+include/exclude路径规则
+
+project_name: AutoCodeDataPipeline
+
+repo:
+  repo_path: repo/mall
+  default_branch: master
+
+scope:
+  domains:
+    - order
+    - stock
+  languages:
+    - java
+    - xml
+    - yaml
+    - yml
+    - md
+    - properties
+
+  include_paths:
+    - mall-admin/src/main/java
+    - mall-portal/src/main/java
+    - mall-common/src/main/java
+    - mall-mbg/src/main/java
+    - mall-mbg/src/main/resources
+    - mall-admin/src/main/resources
+    - mall-portal/src/main/resources
+
+  exclude_paths:
+    - "**/target/**"
+    - "**/node_modules/**"
+    - "**/.git/**"
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/generated/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/.idea/**"
+    - "**/.vscode/**"
+    - "**/logs/**"
+
+  keyword_filters:
+    order:
+      - order
+      - oms
+      - cart
+      - pay
+      - payment
+      - refund
+      - cancel
+      - receiver
+      - shipment
+      - delivery
+    stock:
+      - stock
+      - sku
+      - inventory
+      - lock
+      - deduct
+      - release
+      - ware
+      - product
+
+chunking:
+  java:
+    max_lines_per_chunk: 180
+    min_lines_per_chunk: 20
+  text:
+    max_lines_per_chunk: 220
+    min_lines_per_chunk: 30
+
+output:
+  raw_index_dir: data/raw_index
+  index_file: data/raw_index/repo_index.jsonl
+  sample_index_file: data/samples/repo_index_sample.jsonl
+  max_sample_lines: 120
