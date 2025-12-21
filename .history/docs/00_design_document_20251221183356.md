@@ -1,0 +1,51 @@
+# AutoCodeDataPipeline - Design Document
+
+## 1. Overview
+This document describes the design of an automated training data generation pipeline
+for fine-tuning domain-specific LLMs based on a local code repository.
+
+The pipeline targets two tasks:
+- QA generation grounded in code-level business rules and flows
+- Architecture-level design generation based on existing repository constraints
+
+## 2. Dataset Design
+The training dataset consists of two task types: QA and Design.
+
+Detailed schema definitions, field descriptions, metadata, and examples
+are provided in:
+- docs/01_dataset_schema.md
+
+Representative samples can be found in:
+- data/samples/qa_samples.jsonl
+- data/samples/design_samples.jsonl
+
+## 3. Automated Data Generation Pipeline
+The dataset is generated via a multi-stage automated pipeline, including:
+- Repository indexing and chunking
+- Domain and rule/flow extraction
+- QA and design task generation
+- Post-processing, validation, and deduplication
+
+The full pipeline design and module responsibilities are described in:
+- docs/02_pipeline_design.md
+
+## 4. Quality, Coverage, and Correctness Guarantees
+To ensure logical correctness and stable data quality, the pipeline enforces:
+- Schema validation
+- Evidence grounding against indexed code chunks
+- Trace-based reasoning requirements
+- Deduplication and diversity control across domains, task types, difficulty, and language
+
+Empirical statistics and coverage reports are provided in:
+- docs/05_demo_and_results.md
+
+## 5. Extensibility and Future Work
+The pipeline is designed to be extensible:
+- New repositories can be indexed without code changes
+- New task types can be added via modular generators
+- Multilingual support is implemented at the template layer
+- Lightweight LoRA fine-tuning enables rapid validation
+- Incremental updates can be supported by re-running selective pipeline stages
+
+This design allows the system to evolve with future requirements while maintaining
+data consistency and auditability.

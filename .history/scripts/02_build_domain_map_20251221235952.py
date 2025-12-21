@@ -160,7 +160,7 @@ def is_operation_name(name: str) -> bool:
 
 def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    非严格调用图,用启发式将操作聚成常见流程骨架. 输出:flows,流程列表
+    非严格调用图,用启发式将操作聚成常见流程骨架. 输出：flows，流程列表
     其中一个流程：{
         "flow_id": "place_order",
         "domain": "mixed",
@@ -175,8 +175,6 @@ def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         ],
         "evidence_chunks": ["c_00123", "c_00456"]
         }
-        不是猜调用关系
-        是在回答：“代码仓里是否存在一个‘下单流程的骨架’”
 
     """
     # 将操作按domain分桶

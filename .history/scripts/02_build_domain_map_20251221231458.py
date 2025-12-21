@@ -160,33 +160,15 @@ def is_operation_name(name: str) -> bool:
 
 def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    非严格调用图,用启发式将操作聚成常见流程骨架. 输出:flows,流程列表
-    其中一个流程：{
-        "flow_id": "place_order",
-        "domain": "mixed",
-        "steps": [
-            {
-            "idx": 1,
-            "operation": "createOrder",
-            "evidence_chunk": "c_00123",
-            "why": "创建订单/提交订单"
-            },
-            ...
-        ],
-        "evidence_chunks": ["c_00123", "c_00456"]
-        }
-        不是猜调用关系
-        是在回答：“代码仓里是否存在一个‘下单流程的骨架’”
-
+    非严格调用图,用启发式将操作聚成常见流程骨架.
     """
     # 将操作按domain分桶
     by_domain = defaultdict(list)
     for op in ops:
         by_domain[op["domain"]].append(op)
-    # 例：by_domain["order"]：订单域相关操作；by_domain["inventory"]：库存域相关操作；by_domain["other"]：其它/不确定
 
     flows = []
-    # 从操作名里启发式挑“候选步骤”
+    # 订单下单流程
     place_ops = [o for o in by_domain["order"] if any(k in o["name"].lower() for k in ["create", "submit", "place", "confirm"])]
     stock_lock_ops = [o for o in ops if any(k in o["name"].lower() for k in ["lock", "reserve"])]
     stock_deduct_ops = [o for o in ops if "deduct" in o["name"].lower() or "reduce" in o["name"].lower()]
@@ -194,7 +176,6 @@ def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     cancel_ops = [o for o in by_domain["order"] if "cancel" in o["name"].lower() or "close" in o["name"].lower()]
     stock_release_ops = [o for o in ops if "release" in o["name"].lower() or "unlock" in o["name"].lower()]
 
-    # 每个步骤从候选池里选一个“代表操作”
     def pick_one(cands: List[Dict[str, Any]]) -> Dict[str, Any] | None:
         if not cands:
             return None
@@ -328,51 +309,12 @@ def main() -> None:
                 if k in lt:
                     op_signals[mn][k] += 1  # “我们是因为在这段代码里看到了哪些词，才认为 mn 是订单/库存相关操作的”
 
-
-    # 区别实体和操作，分别生成结构化统计信息。
-    # 理由：实体（entity）回答的是“这是什么东西，在哪儿”
-    # 操作（operation）回答的是“发生了什么，为什么”
-    # 所以：
-    # 实体需要的是「位置/承载」信息 → mentions
-    # 操作需要的是「语义/理由」信息 → signals
-
     def finalize_items(
         evs: Dict[str, Set[str]],
         domains: Dict[str, Counter],
         mentions: Dict[str, Counter],
         item_type: str
     ) -> List[Dict[str, Any]]:
-        '''
-        Docstring for finalize_items
-        把某一类对象（实体或操作）的统计信息，统一整理成结构化、可排序、可解释的最终结果列表。
-        是“出报告 / 出训练数据前的最后整理函数”。
-        :param evs: item → 出现过的代码证据chunk集合
-        :param domains: item → 不同domain的出现次数
-        :param mentions: item → 在哪些文件中被提及（仅实体用）
-        :param item_type: "entity" 或 "operation"
-        :return: item = {
-                            "name": name, #要么是一个“领域实体的类名”，要么是一个“业务操作的方法名”
-                            "domain": dom,
-                            "confidence": round(conf, 3),
-                            "evidence_chunks": sorted(list(evset)),
-                        }
-                        例子：
-                        {
-                            "name": "Stock",
-                            "domain": "inventory",
-                            "confidence": 0.83,
-                            "evidence_chunks": [
-                                "chunk_0123",
-                                "chunk_0456",
-                                "chunk_0789"
-                            ],
-                            "mentions": [
-                                "inventory/Stock.java",
-                                "inventory/StockServiceImpl.java",
-                                "inventory/StockMapper.java"
-                            ]
-                            }
-        '''
         items = []
         for name, evset in evs.items():
             dom_cnt = domains[name]
@@ -390,7 +332,7 @@ def main() -> None:
                 "evidence_chunks": sorted(list(evset)),
             }
             if item_type == "entity":
-                # mentions:最常出现的文件top5, 实体往往有“核心定义文件”，回答：“Order 实体主要在哪些文件中出现？”, “它的实现重心在哪？”
+                # mentions:最常出现的文件top5
                 top_files = [fp for fp, _ in mentions[name].most_common(5)]
                 item["mentions"] = top_files
             items.append(item)
@@ -399,40 +341,20 @@ def main() -> None:
         items.sort(key=lambda x: (x["confidence"], len(x["evidence_chunks"]), x["name"]), reverse=True)
         return items
 
-
     entities = finalize_items(entity_evs, entity_domains, entity_mentions, "entity")
 
     # 操作items单独组装signals
-    '''{
-            "name": "reduceStock",
-            "domain": "inventory",
-            "confidence": 0.92,
-            "evidence_chunks": [
-                "chunk_0123",
-                "chunk_0456"
-            ],
-            "signals": [
-                "stock",
-                "inventory",
-                "sku",
-                "lock"
-            ]
-            }
-            
-            sigs是关键词
-            '''
     operations = []
     for name, evset in op_evs.items():
-        dom_cnt = op_domains[name]  # 计算该操作的领域归属
+        dom_cnt = op_domains[name]
         total = sum(dom_cnt.values()) if dom_cnt else 0
         if total == 0:
             dom = "other"
             conf = 0.0
         else:
-            dom, domv = dom_cnt.most_common(1)[0]  # 有统计信息 → 选票最多的 domain
+            dom, domv = dom_cnt.most_common(1)[0]
             conf = domv / total
-        sigs = [k for k, _ in op_signals[name].most_common(8)]  # 取出这个操作在代码中最常“命中”的前 8 个业务关键词
-
+        sigs = [k for k, _ in op_signals[name].most_common(8)]
         operations.append({
             "name": name,
             "domain": dom,
@@ -460,7 +382,7 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 同时生成一个sample
+    # 同时生成一个sample便于提交
     sample_path = ROOT / "data/samples/domain_map_sample.json"
     sample = dict(out)
     sample["entities"] = out["entities"][:30]

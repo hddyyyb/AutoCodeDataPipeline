@@ -26,27 +26,18 @@ except Exception:
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# {"chunk_id": "27ced7ffba76028a", 
-# "file_path": "mall-admin/src/main/java/com/macro/mall/controller/OmsOrderReturnReasonController.java", 
-# "lang": "java", 
-# "start_line": 73, 
-# "end_line": 89, 
-# "content": "    public CommonResult<OmsOrderReturnReason> getItem(@PathVariable Long id) {\n        OmsOrderReturnReason reason = orderReturnReasonService.getItem(id);\n        return CommonResult.success(reason);\n    }\n\n    @ApiOperation(\"修改退货原因启用状态\")\n    @RequestMapping(value = \"/update/status\", method = RequestMethod.POST)\n    @ResponseBody\n    public CommonResult updateStatus(@RequestParam(value = \"status\") Integer status,\n                                     @RequestParam(\"ids\") List<Long> ids) {\n        int count = orderReturnReasonService.updateStatus(ids, status);\n        if (count > 0) {\n            return CommonResult.success(count);\n        }\n        return CommonResult.failed();\n    }\n}", 
-# "content_hash": "6c7d8c04d6127cc7bf3793fceda6f25c06d1d3d4", 
-# "approx_tokens": 173, 
-# "symbol": "OmsOrderReturnReasonController"}
 
 @dataclass
-class Chunk:            # 关键数据结构Chunk
-    chunk_id: str       # 该chunk的稳定ID(sha1截断)
-    file_path: str      # 相对repo_root的路径
-    lang: str           # java/xml/yaml/md/...或text
-    start_line: int     # 1-based起始行
-    end_line: int       # 1-based结束行
-    content: str        # 原文片段
-    content_hash: str   # content的sha1
-    approx_tokens: int  # 粗估token数(字符/4)
-    symbol: str         # java类名(如果提取到)
+class Chunk:
+    chunk_id: str
+    file_path: str
+    lang: str
+    start_line: int
+    end_line: int
+    content: str
+    content_hash: str
+    approx_tokens: int
+    symbol: str
 
 
 def sha1_text(s: str) -> str:
@@ -59,7 +50,7 @@ def approx_token_count(s: str) -> int:
     return n
 
 
-def load_scope_config(cfg_path: Path) -> Dict:  # 读配置
+def load_scope_config(cfg_path: Path) -> Dict:
     if not cfg_path.exists():
         raise FileNotFoundError(f"找不到配置文件:{cfg_path}")
     if yaml is None:
@@ -68,7 +59,7 @@ def load_scope_config(cfg_path: Path) -> Dict:  # 读配置
         return yaml.safe_load(f)
 
 
-def is_excluded(rel_path: str, exclude_patterns: List[str]) -> bool: # 排除规则
+def is_excluded(rel_path: str, exclude_patterns: List[str]) -> bool:
     for pat in exclude_patterns:
         if fnmatch.fnmatch(rel_path, pat):
             return True
@@ -76,7 +67,7 @@ def is_excluded(rel_path: str, exclude_patterns: List[str]) -> bool: # 排除规
 
 
 def iter_files(repo_root: Path, include_paths: List[str], exclude_patterns: List[str]) -> Iterable[Path]:
-    for inc in include_paths:  # 遍历逻辑，只扫描include_paths指定的子目录
+    for inc in include_paths:
         base = repo_root / inc
         if not base.exists():
             continue
@@ -89,7 +80,7 @@ def iter_files(repo_root: Path, include_paths: List[str], exclude_patterns: List
             yield p
 
 
-def detect_lang(p: Path) -> str:  # 语言识别(detect_lang)
+def detect_lang(p: Path) -> str:
     suf = p.suffix.lower().lstrip(".")
     if suf in ("java", "xml", "yaml", "yml", "md", "properties"):
         return suf
@@ -191,7 +182,7 @@ def split_text_chunks(lines: List[str], max_lines: int, min_lines: int) -> List[
             spans.pop()
     return spans
 
-# 关键词过滤:只保留与order/stock相关文件
+
 def should_keep_by_keywords(rel_path: str, content: str, keyword_filters: Dict[str, List[str]]) -> bool:
     """
     只要命中order或stock关键词之一就保留.
@@ -230,7 +221,7 @@ def build_chunks_for_file(
     if not lines:
         return []
 
-    if lang == "java":  # 尽量按“类/方法”附近切，而不是硬按行数剁。
+    if lang == "java":
         max_lines = int(chunking_cfg["java"]["max_lines_per_chunk"])
         min_lines = int(chunking_cfg["java"]["min_lines_per_chunk"])
         spans = split_java_chunks(lines, max_lines=max_lines, min_lines=min_lines)
@@ -244,22 +235,21 @@ def build_chunks_for_file(
     for (s, e) in spans:
         content = "\n".join(lines[s - 1 : e])
         chash = sha1_text(content)
-        cid = sha1_text(f"{rel}:{s}:{e}:{chash}")[:16]  # chunk_id 是文件路径+起止行+内容hash再sha1，截前16位
-        # 只要文件内容和切分行号不变, chunk_id就是稳定的, 便于 diff比较, 后续QA样本引用一致, 数据迭代时定位变化
+        cid = sha1_text(f"{rel}:{s}:{e}:{chash}")[:16]
         chunks.append(
             Chunk(
-                chunk_id=cid,    
+                chunk_id=cid,
                 file_path=rel,
                 lang=lang,
                 start_line=s,
                 end_line=e,
                 content=content,
-                content_hash=chash,  # content_hash是内容sha1
+                content_hash=chash,
                 approx_tokens=approx_token_count(content),
                 symbol=symbol,
             )
         )
-    return chunks  # 每个片段生成一个Chunk对象(含chunk_id、行号、content、hash等)
+    return chunks
 
 
 def ensure_dir(p: Path) -> None:
@@ -291,7 +281,7 @@ def main() -> None:
     all_rows: List[Dict] = []
     for fp in iter_files(repo_path, include_paths, exclude_paths):
         # 遍历文件，只遍历include_paths下的文件，排除exclude_patterns命中的
-        chunks = build_chunks_for_file(repo_path, fp, chunking_cfg, keyword_filters) # 按文件构建chunks
+        chunks = build_chunks_for_file(repo_path, fp, chunking_cfg, keyword_filters)
         for c in chunks:
             all_rows.append(
                 {

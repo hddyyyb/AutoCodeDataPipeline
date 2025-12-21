@@ -44,7 +44,7 @@ scope:  # 作用域控制
     - "**/.vscode/**"
     - "**/logs/**"
 
-  keyword_filters:  # 即使文件在include_paths里，也要满足“文件名 / 类名 / 包名 / 内容” 命中对应domain的关键词
+  keyword_filters:
     order:
       - order
       - oms
@@ -66,7 +66,7 @@ scope:  # 作用域控制
       - ware
       - product
 
-chunking:  # 代码切分规则
+chunking:
   java:
     max_lines_per_chunk: 180
     min_lines_per_chunk: 20
@@ -75,7 +75,7 @@ chunking:  # 代码切分规则
     min_lines_per_chunk: 30
 
 output:
-  raw_index_dir: data/raw_index   # 全量代码索引（RAG/训练）
-  index_file: data/raw_index/repo_index.jsonl   # 抽样预览
-  sample_index_file: data/samples/repo_index_sample.jsonl  # 原始chunk集合
+  raw_index_dir: data/raw_index
+  index_file: data/raw_index/repo_index.jsonl
+  sample_index_file: data/samples/repo_index_sample.jsonl
   max_sample_lines: 120

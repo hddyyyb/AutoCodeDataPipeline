@@ -175,8 +175,6 @@ def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         ],
         "evidence_chunks": ["c_00123", "c_00456"]
         }
-        不是猜调用关系
-        是在回答：“代码仓里是否存在一个‘下单流程的骨架’”
 
     """
     # 将操作按domain分桶

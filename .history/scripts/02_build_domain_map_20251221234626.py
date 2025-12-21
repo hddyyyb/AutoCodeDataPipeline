@@ -160,33 +160,15 @@ def is_operation_name(name: str) -> bool:
 
 def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    非严格调用图,用启发式将操作聚成常见流程骨架. 输出:flows,流程列表
-    其中一个流程：{
-        "flow_id": "place_order",
-        "domain": "mixed",
-        "steps": [
-            {
-            "idx": 1,
-            "operation": "createOrder",
-            "evidence_chunk": "c_00123",
-            "why": "创建订单/提交订单"
-            },
-            ...
-        ],
-        "evidence_chunks": ["c_00123", "c_00456"]
-        }
-        不是猜调用关系
-        是在回答：“代码仓里是否存在一个‘下单流程的骨架’”
-
+    非严格调用图,用启发式将操作聚成常见流程骨架.
     """
     # 将操作按domain分桶
     by_domain = defaultdict(list)
     for op in ops:
         by_domain[op["domain"]].append(op)
-    # 例：by_domain["order"]：订单域相关操作；by_domain["inventory"]：库存域相关操作；by_domain["other"]：其它/不确定
 
     flows = []
-    # 从操作名里启发式挑“候选步骤”
+    # 订单下单流程
     place_ops = [o for o in by_domain["order"] if any(k in o["name"].lower() for k in ["create", "submit", "place", "confirm"])]
     stock_lock_ops = [o for o in ops if any(k in o["name"].lower() for k in ["lock", "reserve"])]
     stock_deduct_ops = [o for o in ops if "deduct" in o["name"].lower() or "reduce" in o["name"].lower()]
@@ -194,7 +176,6 @@ def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     cancel_ops = [o for o in by_domain["order"] if "cancel" in o["name"].lower() or "close" in o["name"].lower()]
     stock_release_ops = [o for o in ops if "release" in o["name"].lower() or "unlock" in o["name"].lower()]
 
-    # 每个步骤从候选池里选一个“代表操作”
     def pick_one(cands: List[Dict[str, Any]]) -> Dict[str, Any] | None:
         if not cands:
             return None

@@ -230,7 +230,7 @@ def build_chunks_for_file(
     if not lines:
         return []
 
-    if lang == "java":  # 尽量按“类/方法”附近切，而不是硬按行数剁。
+    if lang == "java":
         max_lines = int(chunking_cfg["java"]["max_lines_per_chunk"])
         min_lines = int(chunking_cfg["java"]["min_lines_per_chunk"])
         spans = split_java_chunks(lines, max_lines=max_lines, min_lines=min_lines)
@@ -244,17 +244,16 @@ def build_chunks_for_file(
     for (s, e) in spans:
         content = "\n".join(lines[s - 1 : e])
         chash = sha1_text(content)
-        cid = sha1_text(f"{rel}:{s}:{e}:{chash}")[:16]  # chunk_id 是文件路径+起止行+内容hash再sha1，截前16位
-        # 只要文件内容和切分行号不变, chunk_id就是稳定的, 便于 diff比较, 后续QA样本引用一致, 数据迭代时定位变化
+        cid = sha1_text(f"{rel}:{s}:{e}:{chash}")[:16]
         chunks.append(
             Chunk(
-                chunk_id=cid,    
+                chunk_id=cid,
                 file_path=rel,
                 lang=lang,
                 start_line=s,
                 end_line=e,
                 content=content,
-                content_hash=chash,  # content_hash是内容sha1
+                content_hash=chash,
                 approx_tokens=approx_token_count(content),
                 symbol=symbol,
             )

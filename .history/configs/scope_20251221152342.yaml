@@ -18,10 +18,6 @@ scope:  # 作用域控制
     - md
     - properties
 
-  # mall-admin：后台管理系统
-  # mall-portal：前台接口
-  # mall-common：公共组件
-  # mall-mbg：MyBatis Generator生成的代码
   include_paths:  # 显式纳入的目录,在这些目录里找文件
     - mall-admin/src/main/java
     - mall-portal/src/main/java
@@ -31,7 +27,7 @@ scope:  # 作用域控制
     - mall-admin/src/main/resources
     - mall-portal/src/main/resources
 
-  exclude_paths:  # 全局强制排除规则，排除构建产物，排除IDE配置，排除测试代码，排除自动生成内容
+  exclude_paths:
     - "**/target/**"
     - "**/node_modules/**"
     - "**/.git/**"
@@ -44,7 +40,7 @@ scope:  # 作用域控制
     - "**/.vscode/**"
     - "**/logs/**"
 
-  keyword_filters:  # 即使文件在include_paths里，也要满足“文件名 / 类名 / 包名 / 内容” 命中对应domain的关键词
+  keyword_filters:
     order:
       - order
       - oms
@@ -66,7 +62,7 @@ scope:  # 作用域控制
       - ware
       - product
 
-chunking:  # 代码切分规则
+chunking:
   java:
     max_lines_per_chunk: 180
     min_lines_per_chunk: 20
@@ -75,7 +71,7 @@ chunking:  # 代码切分规则
     min_lines_per_chunk: 30
 
 output:
-  raw_index_dir: data/raw_index   # 全量代码索引（RAG/训练）
-  index_file: data/raw_index/repo_index.jsonl   # 抽样预览
-  sample_index_file: data/samples/repo_index_sample.jsonl  # 原始chunk集合
+  raw_index_dir: data/raw_index
+  index_file: data/raw_index/repo_index.jsonl
+  sample_index_file: data/samples/repo_index_sample.jsonl
   max_sample_lines: 120

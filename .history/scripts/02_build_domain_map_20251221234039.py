@@ -160,33 +160,15 @@ def is_operation_name(name: str) -> bool:
 
 def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    非严格调用图,用启发式将操作聚成常见流程骨架. 输出:flows,流程列表
-    其中一个流程：{
-        "flow_id": "place_order",
-        "domain": "mixed",
-        "steps": [
-            {
-            "idx": 1,
-            "operation": "createOrder",
-            "evidence_chunk": "c_00123",
-            "why": "创建订单/提交订单"
-            },
-            ...
-        ],
-        "evidence_chunks": ["c_00123", "c_00456"]
-        }
-        不是猜调用关系
-        是在回答：“代码仓里是否存在一个‘下单流程的骨架’”
-
+    非严格调用图,用启发式将操作聚成常见流程骨架.
     """
     # 将操作按domain分桶
     by_domain = defaultdict(list)
     for op in ops:
         by_domain[op["domain"]].append(op)
-    # 例：by_domain["order"]：订单域相关操作；by_domain["inventory"]：库存域相关操作；by_domain["other"]：其它/不确定
 
     flows = []
-    # 从操作名里启发式挑“候选步骤”
+    # 订单下单流程
     place_ops = [o for o in by_domain["order"] if any(k in o["name"].lower() for k in ["create", "submit", "place", "confirm"])]
     stock_lock_ops = [o for o in ops if any(k in o["name"].lower() for k in ["lock", "reserve"])]
     stock_deduct_ops = [o for o in ops if "deduct" in o["name"].lower() or "reduce" in o["name"].lower()]
@@ -194,7 +176,6 @@ def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     cancel_ops = [o for o in by_domain["order"] if "cancel" in o["name"].lower() or "close" in o["name"].lower()]
     stock_release_ops = [o for o in ops if "release" in o["name"].lower() or "unlock" in o["name"].lower()]
 
-    # 每个步骤从候选池里选一个“代表操作”
     def pick_one(cands: List[Dict[str, Any]]) -> Dict[str, Any] | None:
         if not cands:
             return None
@@ -417,10 +398,7 @@ def main() -> None:
                 "sku",
                 "lock"
             ]
-            }
-            
-            sigs是关键词
-            '''
+            }'''
     operations = []
     for name, evset in op_evs.items():
         dom_cnt = op_domains[name]  # 计算该操作的领域归属
@@ -432,7 +410,13 @@ def main() -> None:
             dom, domv = dom_cnt.most_common(1)[0]  # 有统计信息 → 选票最多的 domain
             conf = domv / total
         sigs = [k for k, _ in op_signals[name].most_common(8)]  # 取出这个操作在代码中最常“命中”的前 8 个业务关键词
-
+        '''op_signals["reduceStock"] = {
+                            "stock": 12,
+                            "inventory": 9,
+                            "sku": 6,
+                            "lock": 3
+                        }
+            sigs = ["stock", "inventory", "sku", "lock"]'''
         operations.append({
             "name": name,
             "domain": dom,
@@ -460,7 +444,7 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 同时生成一个sample
+    # 同时生成一个sample便于提交
     sample_path = ROOT / "data/samples/domain_map_sample.json"
     sample = dict(out)
     sample["entities"] = out["entities"][:30]
