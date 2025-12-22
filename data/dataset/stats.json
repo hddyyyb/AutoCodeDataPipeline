@@ -8,12 +8,12 @@
     "metrics": {
       "count": 124,
       "language_dist": {
-        "en": 62,
-        "zh": 62
+        "zh": 62,
+        "en": 62
       },
       "domain_dist": {
-        "mixed": 82,
-        "order": 42
+        "order": 42,
+        "mixed": 82
       },
       "qa_type_dist": {
         "rule": 120,
@@ -28,13 +28,14 @@
     }
   },
   "design": {
-    "before_dedup": 4,
+    "before_dedup": 6,
     "after_dedup": 3,
-    "removed": 1,
+    "removed": 3,
     "metrics": {
       "count": 3,
       "language_dist": {
-        "zh": 3
+        "en": 2,
+        "zh": 1
       },
       "domain_dist": {
         "order": 2,
@@ -46,7 +47,7 @@
         "easy": 1
       },
       "evidence_avg": 3.0,
-      "trace_steps_avg": 5.0
+      "trace_steps_avg": 4.333
     }
   }
 }
