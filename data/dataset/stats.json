@@ -1,69 +1,67 @@
 {
   "repo_index_chunks": 3408,
   "qa": {
-    "before_dedup": 110,
-    "after_dedup": 110,
+    "before_dedup": 54,
+    "after_dedup": 54,
     "removed": 0,
     "metrics": {
-      "count": 110,
+      "count": 54,
       "language_dist": {
-        "zh": 55,
-        "en": 55
+        "zh": 54
       },
       "domain_dist": {
-        "order": 92,
-        "mixed": 16,
-        "stock": 2
+        "order": 46,
+        "mixed": 7,
+        "stock": 1
       },
       "difficulty_dist": {
-        "unknown": 110
+        "unknown": 54
       },
-      "evidence_snippets_avg": 1.036,
-      "code_chars_avg": 1227.291,
+      "evidence_snippets_avg": 1.037,
+      "code_chars_avg": 1229.481,
       "trace_steps_avg": 3.0,
       "snippet_coverage_rate": 1.0,
-      "evidence_avg": 1.036,
+      "evidence_avg": 1.037,
       "qa_type_dist": {
-        "rule": 106,
-        "flow": 4
+        "rule": 52,
+        "flow": 2
       }
     }
   },
   "design": {
-    "before_dedup": 92,
-    "after_dedup": 92,
+    "before_dedup": 50,
+    "after_dedup": 50,
     "removed": 0,
     "metrics": {
-      "count": 92,
+      "count": 50,
       "language_dist": {
-        "zh": 50,
-        "en": 42
+        "zh": 50
       },
       "domain_dist": {
-        "order": 53,
-        "stock": 15,
-        "mixed": 24
+        "mixed": 11,
+        "order": 30,
+        "stock": 9
       },
       "difficulty_dist": {
-        "hard": 15,
-        "medium": 74,
+        "medium": 38,
+        "hard": 9,
         "easy": 3
       },
       "evidence_snippets_avg": 3.0,
-      "code_chars_avg": 2504.217,
+      "code_chars_avg": 2589.04,
       "trace_steps_avg": 4.0,
       "snippet_coverage_rate": 1.0,
       "evidence_avg": 3.0
     }
   },
   "final_finetune": {
-    "before_dedup": 202,
-    "after_dedup": 202,
+    "before_dedup": 104,
+    "after_dedup": 104,
     "removed": 0,
     "splits": {
-      "train": 161,
-      "dev": 20,
-      "test": 21
+      "train": 83,
+      "dev": 10,
+      "test": 11
     }
   }
 }
