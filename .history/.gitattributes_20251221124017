@@ -1,6 +1,0 @@
-# 排除作为数据源的Java代码，不参与语言统计
-mall/** linguist-vendored
-
-# 或者更精确
-mall/src/** linguist-vendored
-mall/**.java linguist-vendored
