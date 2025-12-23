@@ -1,53 +1,69 @@
 {
-  "generated_at": "E:\\Reasarch\\_7_工作\\__汇丰银行\\code\\AutoCodeDataPipeline",
   "repo_index_chunks": 3408,
   "qa": {
-    "before_dedup": 124,
-    "after_dedup": 124,
+    "before_dedup": 110,
+    "after_dedup": 110,
     "removed": 0,
     "metrics": {
-      "count": 124,
+      "count": 110,
       "language_dist": {
-        "zh": 62,
-        "en": 62
+        "zh": 55,
+        "en": 55
       },
       "domain_dist": {
-        "order": 42,
-        "mixed": 82
-      },
-      "qa_type_dist": {
-        "rule": 120,
-        "flow": 4
+        "order": 92,
+        "mixed": 16,
+        "stock": 2
       },
       "difficulty_dist": {
-        "medium": 120,
-        "hard": 4
+        "unknown": 110
       },
-      "evidence_avg": 1.016,
-      "trace_steps_avg": 3.0
+      "evidence_snippets_avg": 1.036,
+      "code_chars_avg": 1227.291,
+      "trace_steps_avg": 3.0,
+      "snippet_coverage_rate": 1.0,
+      "evidence_avg": 1.036,
+      "qa_type_dist": {
+        "rule": 106,
+        "flow": 4
+      }
     }
   },
   "design": {
-    "before_dedup": 6,
-    "after_dedup": 3,
-    "removed": 3,
+    "before_dedup": 92,
+    "after_dedup": 92,
+    "removed": 0,
     "metrics": {
-      "count": 3,
+      "count": 92,
       "language_dist": {
-        "en": 2,
-        "zh": 1
+        "zh": 50,
+        "en": 42
       },
       "domain_dist": {
-        "order": 2,
-        "stock": 1
+        "order": 53,
+        "stock": 15,
+        "mixed": 24
       },
       "difficulty_dist": {
-        "hard": 1,
-        "medium": 1,
-        "easy": 1
+        "hard": 15,
+        "medium": 74,
+        "easy": 3
       },
-      "evidence_avg": 3.0,
-      "trace_steps_avg": 4.333
+      "evidence_snippets_avg": 3.0,
+      "code_chars_avg": 2504.217,
+      "trace_steps_avg": 4.0,
+      "snippet_coverage_rate": 1.0,
+      "evidence_avg": 3.0
+    }
+  },
+  "final_finetune": {
+    "before_dedup": 202,
+    "after_dedup": 202,
+    "removed": 0,
+    "splits": {
+      "train": 161,
+      "dev": 20,
+      "test": 21
     }
   }
 }
