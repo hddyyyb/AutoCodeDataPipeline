@@ -1,69 +1,67 @@
 {
   "repo_index_chunks": 3408,
   "qa": {
-    "before_dedup": 116,
-    "after_dedup": 116,
+    "before_dedup": 57,
+    "after_dedup": 57,
     "removed": 0,
     "metrics": {
-      "count": 116,
+      "count": 57,
       "language_dist": {
-        "zh": 58,
-        "en": 58
+        "zh": 57
       },
       "domain_dist": {
-        "order": 88,
-        "stock": 14,
-        "mixed": 14
+        "order": 43,
+        "mixed": 7,
+        "stock": 7
       },
       "difficulty_dist": {
-        "unknown": 116
+        "unknown": 57
       },
-      "evidence_snippets_avg": 1.034,
-      "code_chars_avg": 1294.966,
+      "evidence_snippets_avg": 1.035,
+      "code_chars_avg": 1297.07,
       "trace_steps_avg": 3.0,
       "snippet_coverage_rate": 1.0,
-      "evidence_avg": 1.034,
+      "evidence_avg": 1.035,
       "qa_type_dist": {
-        "rule": 112,
-        "flow": 4
+        "rule": 55,
+        "flow": 2
       }
     }
   },
   "design": {
-    "before_dedup": 74,
-    "after_dedup": 74,
+    "before_dedup": 46,
+    "after_dedup": 46,
     "removed": 0,
     "metrics": {
-      "count": 74,
+      "count": 46,
       "language_dist": {
-        "zh": 41,
-        "en": 33
+        "zh": 46
       },
       "domain_dist": {
-        "stock": 9,
-        "order": 42,
-        "mixed": 23
+        "order": 25,
+        "stock": 12,
+        "mixed": 9
       },
       "difficulty_dist": {
-        "medium": 62,
-        "hard": 9,
+        "medium": 37,
+        "hard": 6,
         "easy": 3
       },
       "evidence_snippets_avg": 3.0,
-      "code_chars_avg": 2527.257,
+      "code_chars_avg": 2457.391,
       "trace_steps_avg": 4.0,
       "snippet_coverage_rate": 1.0,
       "evidence_avg": 3.0
     }
   },
   "final_finetune": {
-    "before_dedup": 190,
-    "after_dedup": 190,
+    "before_dedup": 103,
+    "after_dedup": 103,
     "removed": 0,
     "splits": {
-      "train": 152,
-      "dev": 19,
-      "test": 19
+      "train": 82,
+      "dev": 10,
+      "test": 11
     }
   }
 }

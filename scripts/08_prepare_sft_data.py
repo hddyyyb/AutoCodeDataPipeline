@@ -415,7 +415,7 @@ def main():
                 print(f"[Step08] split={split} lang={lg} mode={sft_mode} format={sft_fmt} count={len(sft_rows)} -> {out_path}")
                 total += len(sft_rows)
 
-        # 2)兼容输出:当你明确指定只训练某一种语言时,额外写一份split.jsonl和train.jsonl
+        # 2)兼容输出:当明确指定只训练某一种语言时,额外写一份split.jsonl和train.jsonl
         if lang_filter in ("zh", "en"):
             sft_rows = [build_sft_row(s, sft_fmt, sft_mode, cfg) for s in rows]
             compat_path = out_dir / f"{split}{suffix}"

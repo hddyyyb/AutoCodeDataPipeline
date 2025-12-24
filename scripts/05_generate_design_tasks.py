@@ -5,17 +5,6 @@
 AutoCodeDataPipeline Step05(v8)
 场景2:需求->基于本地代码仓架构生成设计方案(多样性+代表性+英文纯净)
 
-你现在“样本太少”的根因通常有两类:
-1)英文被DESIGN_STRICT_EN=2大量丢弃: requirement_en里夹中文(常见于name_en缺失时回退中文name_zh)
-2)需求总数太少(templates太少/auto_expand关闭/flows&rules较少)导致最终样本天然少
-
-本版本修复:
-- expand阶段生成英文requirement时,如果title/name包含中文,自动改为纯英文fallback(避免被strict_en丢弃)
-- 增加“每条需求多变体”机制:同一requirement可生成多份不同策略组合/trace/指令的样本(默认每语言3份)
-  通过环境变量DESIGN_VARIANTS_PER_REQ控制
-- 证据chunk顺序每次打乱,避免所有样本完全相同
-- 默认把DESIGN_AUTO_EXPAND_N从60提升为120(你可用环境变量覆盖)
-
 保留目标:
 - 每条样本带evidence_snippets+trace
 - bilingual时分别生成zh/en两套
@@ -826,7 +815,6 @@ def main():
     cfg = load_yaml(cfg_path)
     templates = cfg.get("templates", []) or []
 
-    # 默认从60提升到120,你可用环境变量覆盖
     extra_n = int(os.environ.get("DESIGN_AUTO_EXPAND_N", "120"))
     auto_reqs = expand_requirements_from_flows_and_rules(flows, rules, max_n=extra_n) if auto_expand else []
 
