@@ -1,7 +1,7 @@
 {
   "repo": {
     "repo_path": "repo/mall",
-    "generated_at": "2025-12-23T18:31:12+0800",
+    "generated_at": "2025-12-24T19:06:12+0800",
     "source_index": "data/raw_index/repo_index.jsonl"
   },
   "boundaries": {
@@ -3563,7 +3563,7 @@
     },
     {
       "name": "OmsPortalOrderServiceImpl",
-      "domain": "order",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "e7286399c17d1982"
@@ -3777,37 +3777,28 @@
     },
     {
       "name": "updateShowStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8268a85202685228",
         "9a3b2bbcad2b0459",
         "c1728d2fd25c18ee"
       ],
-      "signals": []
-    },
-    {
-      "name": "webPay",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "146a1e66ce235224",
-        "6fc5bdd08cc4f06a"
-      ],
       "signals": [
-        "pay",
-        "trade"
+        "pms"
       ]
     },
     {
       "name": "updateVerifyStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8a933cee61acd8fc",
         "a611dcfd18944b0a"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateReceiverInfo",
@@ -3838,13 +3829,15 @@
     },
     {
       "name": "updatePublishStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8c017c1563def785",
         "a611dcfd18944b0a"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateNote",
@@ -3862,23 +3855,40 @@
     },
     {
       "name": "updateNewStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8c017c1563def785",
         "a611dcfd18944b0a"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
+    },
+    {
+      "name": "updateNavStatus",
+      "domain": "mixed",
+      "confidence": 1.0,
+      "evidence_chunks": [
+        "7d824737d8a0b6ed",
+        "c1728d2fd25c18ee"
+      ],
+      "signals": [
+        "pms",
+        "order"
+      ]
     },
     {
       "name": "updateDeleteStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "a611dcfd18944b0a",
         "dc72dec4fe9e6e83"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateAttr",
@@ -3891,39 +3901,6 @@
       "signals": [
         "oms",
         "cart"
-      ]
-    },
-    {
-      "name": "paySuccess",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "4f041945b4e436da",
-        "90faa8ee59f346e6"
-      ],
-      "signals": [
-        "order",
-        "oms",
-        "pay",
-        "cancel",
-        "payment",
-        "stock",
-        "sku"
-      ]
-    },
-    {
-      "name": "pay",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "146a1e66ce235224",
-        "7fa2bfaaed828ee2"
-      ],
-      "signals": [
-        "pay",
-        "order",
-        "oms",
-        "trade"
       ]
     },
     {
@@ -4012,12 +3989,14 @@
     },
     {
       "name": "updateFactoryStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "9a3b2bbcad2b0459"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateCouponStatus",
@@ -4033,109 +4012,13 @@
     },
     {
       "name": "updateBrand",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "9d12782b9899c5a6"
       ],
-      "signals": []
-    },
-    {
-      "name": "setPaymentTime",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "580d68a131c46a50"
-      ],
       "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "setPayType",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "b9f8871f904cd95b"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "setPayAmount",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "be7688a26787f3ee"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "setLockStock",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "3ee02597861858b9"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "setDeductionPerAmount",
-      "domain": "mixed",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "459cb880f74c2e9b"
-      ],
-      "signals": [
-        "order",
-        "deduct"
-      ]
-    },
-    {
-      "name": "setCreateDate",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "8159765e1f4fb8b0"
-      ],
-      "signals": []
-    },
-    {
-      "name": "setConfirmStatus",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "474592d939339743"
-      ],
-      "signals": []
-    },
-    {
-      "name": "setConfirmOvertime",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "0b9224206d77e263"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "setAutoConfirmDay",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "5389be76bfcbaa8e"
-      ],
-      "signals": [
-        "delivery"
+        "pms"
       ]
     },
     {
@@ -4166,7 +4049,7 @@
     },
     {
       "name": "lockStock",
-      "domain": "mixed",
+      "domain": "stock",
       "confidence": 1.0,
       "evidence_chunks": [
         "3590e1ff95c27765"
@@ -4176,7 +4059,9 @@
         "cart",
         "stock",
         "sku",
-        "lock"
+        "lock",
+        "skustock",
+        "pms"
       ]
     },
     {
@@ -4188,53 +4073,401 @@
       ],
       "signals": [
         "stock",
-        "sku"
+        "sku",
+        "skustock",
+        "pms"
       ]
     },
     {
-      "name": "getPaymentTime",
+      "name": "createBrand",
+      "domain": "mixed",
+      "confidence": 1.0,
+      "evidence_chunks": [
+        "a8bffb59c5be64d8"
+      ],
+      "signals": [
+        "pms"
+      ]
+    },
+    {
+      "name": "cancelUserOrder",
       "domain": "order",
       "confidence": 1.0,
       "evidence_chunks": [
-        "580d68a131c46a50"
+        "c3e22f7f04764a7b"
+      ],
+      "signals": [
+        "order",
+        "oms",
+        "cancel"
+      ]
+    },
+    {
+      "name": "calcPayAmount",
+      "domain": "order",
+      "confidence": 1.0,
+      "evidence_chunks": [
+        "5c2efd520453811c"
+      ],
+      "signals": [
+        "order",
+        "oms",
+        "pay"
+      ]
+    },
+    {
+      "name": "alipayClient",
+      "domain": "mixed",
+      "confidence": 1.0,
+      "evidence_chunks": [
+        "93c2b30e8e086946"
+      ],
+      "signals": [
+        "pay"
+      ]
+    },
+    {
+      "name": "createCriteriaInternal",
+      "domain": "mixed",
+      "confidence": 0.882,
+      "evidence_chunks": [
+        "01de1299ccfdb7b6",
+        "0399e3ba4d106c7b",
+        "06153acce37957fb",
+        "07e82cced22973f0",
+        "088c11ece4d2ec88",
+        "09ae695b46c26b83",
+        "0b88b8e3421cb6df",
+        "0bdf825b74231ce4",
+        "0cbca7eca096803a",
+        "0dcbf930de885163",
+        "134622bba22ee6a9",
+        "143899ba1d4fe3a5",
+        "16a9f1f90fd12277",
+        "171f6e08f621636c",
+        "1980530c2d4939d9",
+        "1bec2f4dc8ef612d",
+        "2173f18ef9db4000",
+        "22c7342348f26879",
+        "22db29a4ab8393c1",
+        "29e339d984283794",
+        "2f4eb091aec0a555",
+        "30b4c5e633c00c58",
+        "34b81762b9931cc5",
+        "4cd8ca7d67fab057",
+        "4f1de78a4b25a2c0",
+        "506c962b1565d27c",
+        "607b5ddc3912aad6",
+        "634ef0ae52cbe823",
+        "6521ff8047604014",
+        "6ab052da102b0891",
+        "6efd724d4e8bc2a3",
+        "70036651f6b0595a",
+        "71edea5ff8fb1947",
+        "72c722b5a3a31081",
+        "767e6ea225da3004",
+        "7879ae1db48673aa",
+        "7ff6550097c4308f",
+        "8290b9a7fe14efea",
+        "8371cb2e3b9ce625",
+        "842ac2f9347fd8cf",
+        "85d9b1d5d624d19d",
+        "8ddb1062739841a2",
+        "8de8d109f4b413ae",
+        "8f4b1462e7a615a7",
+        "9061d28e67a92fcf",
+        "94e2e29aede767ca",
+        "94ef6d29aefbd385",
+        "96ade29b12509085",
+        "9c2154fa0b3a5e79",
+        "a4a291221db7e30e",
+        "a748c8b1a52ca099",
+        "a7f574f6c44e7fec",
+        "a9bce479d94e68fd",
+        "abdd03223e46e9c7",
+        "b15ad7615cde6eb1",
+        "b168a3f921d45bc8",
+        "b3fccb8b02a344bb",
+        "b54ff7e548f5cec3",
+        "b6a0b230500732fb",
+        "b7129e2424cf4dab",
+        "b754a4a471cd74f0",
+        "bb3d1b0ccc98588a",
+        "c6da693725700950",
+        "cdcaeac510efd05b",
+        "cf7869d4c81d2edd",
+        "cfc439fde68e1d14",
+        "d335904ac6ca2233",
+        "ddc5c87f9287da93",
+        "ddf902c6bd517299",
+        "deb04a4f1fbae297",
+        "e9b280da63faf07c",
+        "eaad486d2102d47a",
+        "ec5f5c43dfef93bd",
+        "f01c59e957408c5f",
+        "f8b86da05542d6e5",
+        "fc996d013e94199f"
+      ],
+      "signals": [
+        "order"
+      ]
+    },
+    {
+      "name": "createCriteria",
+      "domain": "mixed",
+      "confidence": 0.882,
+      "evidence_chunks": [
+        "01de1299ccfdb7b6",
+        "0399e3ba4d106c7b",
+        "06153acce37957fb",
+        "07e82cced22973f0",
+        "088c11ece4d2ec88",
+        "09ae695b46c26b83",
+        "0b88b8e3421cb6df",
+        "0bdf825b74231ce4",
+        "0cbca7eca096803a",
+        "0dcbf930de885163",
+        "134622bba22ee6a9",
+        "143899ba1d4fe3a5",
+        "16a9f1f90fd12277",
+        "171f6e08f621636c",
+        "1980530c2d4939d9",
+        "1bec2f4dc8ef612d",
+        "2173f18ef9db4000",
+        "22c7342348f26879",
+        "22db29a4ab8393c1",
+        "29e339d984283794",
+        "2f4eb091aec0a555",
+        "30b4c5e633c00c58",
+        "34b81762b9931cc5",
+        "4cd8ca7d67fab057",
+        "4f1de78a4b25a2c0",
+        "506c962b1565d27c",
+        "607b5ddc3912aad6",
+        "634ef0ae52cbe823",
+        "6521ff8047604014",
+        "6ab052da102b0891",
+        "6efd724d4e8bc2a3",
+        "70036651f6b0595a",
+        "71edea5ff8fb1947",
+        "72c722b5a3a31081",
+        "767e6ea225da3004",
+        "7879ae1db48673aa",
+        "7ff6550097c4308f",
+        "8290b9a7fe14efea",
+        "8371cb2e3b9ce625",
+        "842ac2f9347fd8cf",
+        "85d9b1d5d624d19d",
+        "8ddb1062739841a2",
+        "8de8d109f4b413ae",
+        "8f4b1462e7a615a7",
+        "9061d28e67a92fcf",
+        "94e2e29aede767ca",
+        "94ef6d29aefbd385",
+        "96ade29b12509085",
+        "9c2154fa0b3a5e79",
+        "a4a291221db7e30e",
+        "a748c8b1a52ca099",
+        "a7f574f6c44e7fec",
+        "a9bce479d94e68fd",
+        "abdd03223e46e9c7",
+        "b15ad7615cde6eb1",
+        "b168a3f921d45bc8",
+        "b3fccb8b02a344bb",
+        "b54ff7e548f5cec3",
+        "b6a0b230500732fb",
+        "b7129e2424cf4dab",
+        "b754a4a471cd74f0",
+        "bb3d1b0ccc98588a",
+        "c6da693725700950",
+        "cdcaeac510efd05b",
+        "cf7869d4c81d2edd",
+        "cfc439fde68e1d14",
+        "d335904ac6ca2233",
+        "ddc5c87f9287da93",
+        "ddf902c6bd517299",
+        "deb04a4f1fbae297",
+        "e9b280da63faf07c",
+        "eaad486d2102d47a",
+        "ec5f5c43dfef93bd",
+        "f01c59e957408c5f",
+        "f8b86da05542d6e5",
+        "fc996d013e94199f"
+      ],
+      "signals": [
+        "order"
+      ]
+    },
+    {
+      "name": "updateRecommendStatus",
+      "domain": "mixed",
+      "confidence": 0.75,
+      "evidence_chunks": [
+        "1b5e50cc25e46772",
+        "1c53d9ed57ce29ad",
+        "574b7f3d14d4a4dc",
+        "5c8994e31fc3e0c4",
+        "5e92cb8c8f441332",
+        "8c017c1563def785",
+        "a611dcfd18944b0a",
+        "b48dad72f8a7f66b"
+      ],
+      "signals": [
+        "order",
+        "pms"
+      ]
+    },
+    {
+      "name": "updateStatus",
+      "domain": "order",
+      "confidence": 0.667,
+      "evidence_chunks": [
+        "1ae122f377240db0",
+        "1b569fa9ac8c6cfe",
+        "27ced7ffba76028a",
+        "4502693d16601f36",
+        "99bf5bad422feaaa",
+        "c02bd7e356e6dd02"
+      ],
+      "signals": [
+        "order",
+        "oms"
+      ]
+    },
+    {
+      "name": "cancelTimeOutOrder",
+      "domain": "order",
+      "confidence": 0.667,
+      "evidence_chunks": [
+        "19ed9c3491876de5",
+        "90faa8ee59f346e6",
+        "c72a05ca3a40458a"
+      ],
+      "signals": [
+        "order",
+        "oms",
+        "cancel",
+        "sku",
+        "pay",
+        "stock",
+        "lock",
+        "release"
+      ]
+    },
+    {
+      "name": "webPay",
+      "domain": "mixed",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "146a1e66ce235224",
+        "6fc5bdd08cc4f06a"
       ],
       "signals": [
         "pay",
-        "payment"
+        "trade"
       ]
     },
     {
-      "name": "getPayType",
+      "name": "paySuccess",
       "domain": "order",
-      "confidence": 1.0,
+      "confidence": 0.5,
       "evidence_chunks": [
-        "b9f8871f904cd95b"
+        "4f041945b4e436da",
+        "90faa8ee59f346e6"
       ],
       "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "getPayAmount",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "e0547433b500da84"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "getLockStock",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "3ee02597861858b9"
-      ],
-      "signals": [
+        "order",
+        "oms",
+        "pay",
+        "cancel",
+        "payment",
         "stock",
-        "lock"
+        "sku",
+        "reduce"
+      ]
+    },
+    {
+      "name": "pay",
+      "domain": "mixed",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "146a1e66ce235224",
+        "7fa2bfaaed828ee2"
+      ],
+      "signals": [
+        "pay",
+        "order",
+        "oms",
+        "trade"
+      ]
+    },
+    {
+      "name": "getUpdateInfo",
+      "domain": "mixed",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "9b5877883d6fb0c6",
+        "ae2b7c810b1e34b4"
+      ],
+      "signals": [
+        "pms",
+        "stock",
+        "sku",
+        "skustock"
+      ]
+    },
+    {
+      "name": "cancelOrder",
+      "domain": "order",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "17d9bc3b00dac599",
+        "90faa8ee59f346e6"
+      ],
+      "signals": [
+        "order",
+        "oms",
+        "cancel",
+        "pay",
+        "stock",
+        "sku",
+        "release"
+      ]
+    },
+    {
+      "name": "update",
+      "domain": "mixed",
+      "confidence": 0.476,
+      "evidence_chunks": [
+        "01f8c3a48e05e7ea",
+        "09fa9abbcd47cab5",
+        "17d10e50e2333bdf",
+        "1990f6a3fdf5c3fc",
+        "221659f5c1b5c0a8",
+        "2fe898829f6316d8",
+        "32563d36b754ad0b",
+        "38cf26d3fec66e42",
+        "3f459b1b7f1dedb3",
+        "3fe60a97f662577a",
+        "4502693d16601f36",
+        "582b09d2025d1e08",
+        "72cea8b8180e8b9f",
+        "74db48a6ad4d8455",
+        "7a3bc976531092f0",
+        "97adcea7d2061671",
+        "9811c73421ddbee1",
+        "ad1f2f346a669ce2",
+        "e55d31f2f3fd1126",
+        "f0a598987d5ec717",
+        "f76a36d6e40e6dd4"
+      ],
+      "signals": [
+        "pms",
+        "order",
+        "oms",
+        "stock",
+        "sku",
+        "skustock"
       ]
     }
   ],
@@ -4252,28 +4485,21 @@
         },
         {
           "idx": 2,
-          "operation": "isAccountNonLocked",
-          "evidence_chunk": "1816e8512cabf3dd",
+          "operation": "lockStock",
+          "evidence_chunk": "3590e1ff95c27765",
           "why": "锁定库存/预占库存"
         },
         {
           "idx": 3,
-          "operation": "webPay",
-          "evidence_chunk": "146a1e66ce235224",
+          "operation": "paySuccessByOrderSn",
+          "evidence_chunk": "e6c51e5601cc37c9",
           "why": "支付回调/支付通知"
-        },
-        {
-          "idx": 4,
-          "operation": "setDeductionPerAmount",
-          "evidence_chunk": "459cb880f74c2e9b",
-          "why": "扣减库存/确认扣减"
         }
       ],
       "evidence_chunks": [
-        "146a1e66ce235224",
-        "1816e8512cabf3dd",
-        "459cb880f74c2e9b",
-        "7147572a9e293e26"
+        "3590e1ff95c27765",
+        "7147572a9e293e26",
+        "e6c51e5601cc37c9"
       ]
     },
     {
@@ -4283,13 +4509,13 @@
       "steps": [
         {
           "idx": 1,
-          "operation": "webPay",
-          "evidence_chunk": "146a1e66ce235224",
+          "operation": "paySuccessByOrderSn",
+          "evidence_chunk": "e6c51e5601cc37c9",
           "why": "处理支付回调并驱动状态流转"
         }
       ],
       "evidence_chunks": [
-        "146a1e66ce235224"
+        "e6c51e5601cc37c9"
       ]
     }
   ]

@@ -1,7 +1,7 @@
 {
   "repo": {
     "repo_path": "repo/mall",
-    "generated_at": "2025-12-23T18:31:12+0800",
+    "generated_at": "2025-12-24T19:06:12+0800",
     "source_index": "data/raw_index/repo_index.jsonl"
   },
   "boundaries": {
@@ -3563,7 +3563,7 @@
     },
     {
       "name": "OmsPortalOrderServiceImpl",
-      "domain": "order",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "e7286399c17d1982"
@@ -3970,7 +3970,7 @@
     },
     {
       "name": "OmsOrderItem",
-      "domain": "order",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "88956d0151f861b9"
@@ -4091,7 +4091,7 @@
     },
     {
       "name": "OmsCartItem",
-      "domain": "order",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "6b99e9fb47f19f51"
@@ -4113,7 +4113,7 @@
     },
     {
       "name": "CartPromotionItem",
-      "domain": "order",
+      "domain": "stock",
       "confidence": 1.0,
       "evidence_chunks": [
         "150b223b4ce8f7d3"
@@ -4173,37 +4173,28 @@
     },
     {
       "name": "updateShowStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8268a85202685228",
         "9a3b2bbcad2b0459",
         "c1728d2fd25c18ee"
       ],
-      "signals": []
-    },
-    {
-      "name": "webPay",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "146a1e66ce235224",
-        "6fc5bdd08cc4f06a"
-      ],
       "signals": [
-        "pay",
-        "trade"
+        "pms"
       ]
     },
     {
       "name": "updateVerifyStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8a933cee61acd8fc",
         "a611dcfd18944b0a"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateReceiverInfo",
@@ -4234,13 +4225,15 @@
     },
     {
       "name": "updatePublishStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8c017c1563def785",
         "a611dcfd18944b0a"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateNote",
@@ -4258,23 +4251,40 @@
     },
     {
       "name": "updateNewStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "8c017c1563def785",
         "a611dcfd18944b0a"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
+    },
+    {
+      "name": "updateNavStatus",
+      "domain": "mixed",
+      "confidence": 1.0,
+      "evidence_chunks": [
+        "7d824737d8a0b6ed",
+        "c1728d2fd25c18ee"
+      ],
+      "signals": [
+        "pms",
+        "order"
+      ]
     },
     {
       "name": "updateDeleteStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "a611dcfd18944b0a",
         "dc72dec4fe9e6e83"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateAttr",
@@ -4287,39 +4297,6 @@
       "signals": [
         "oms",
         "cart"
-      ]
-    },
-    {
-      "name": "paySuccess",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "4f041945b4e436da",
-        "90faa8ee59f346e6"
-      ],
-      "signals": [
-        "order",
-        "oms",
-        "pay",
-        "cancel",
-        "payment",
-        "stock",
-        "sku"
-      ]
-    },
-    {
-      "name": "pay",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "146a1e66ce235224",
-        "7fa2bfaaed828ee2"
-      ],
-      "signals": [
-        "pay",
-        "order",
-        "oms",
-        "trade"
       ]
     },
     {
@@ -4408,12 +4385,14 @@
     },
     {
       "name": "updateFactoryStatus",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "9a3b2bbcad2b0459"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "updateCouponStatus",
@@ -4429,109 +4408,13 @@
     },
     {
       "name": "updateBrand",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "9d12782b9899c5a6"
       ],
-      "signals": []
-    },
-    {
-      "name": "setPaymentTime",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "580d68a131c46a50"
-      ],
       "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "setPayType",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "b9f8871f904cd95b"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "setPayAmount",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "be7688a26787f3ee"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "setLockStock",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "3ee02597861858b9"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "setDeductionPerAmount",
-      "domain": "mixed",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "459cb880f74c2e9b"
-      ],
-      "signals": [
-        "order",
-        "deduct"
-      ]
-    },
-    {
-      "name": "setCreateDate",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "8159765e1f4fb8b0"
-      ],
-      "signals": []
-    },
-    {
-      "name": "setConfirmStatus",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "474592d939339743"
-      ],
-      "signals": []
-    },
-    {
-      "name": "setConfirmOvertime",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "0b9224206d77e263"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "setAutoConfirmDay",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "5389be76bfcbaa8e"
-      ],
-      "signals": [
-        "delivery"
+        "pms"
       ]
     },
     {
@@ -4562,7 +4445,7 @@
     },
     {
       "name": "lockStock",
-      "domain": "mixed",
+      "domain": "stock",
       "confidence": 1.0,
       "evidence_chunks": [
         "3590e1ff95c27765"
@@ -4572,7 +4455,9 @@
         "cart",
         "stock",
         "sku",
-        "lock"
+        "lock",
+        "skustock",
+        "pms"
       ]
     },
     {
@@ -4584,115 +4469,21 @@
       ],
       "signals": [
         "stock",
-        "sku"
-      ]
-    },
-    {
-      "name": "getPaymentTime",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "580d68a131c46a50"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "getPayType",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "b9f8871f904cd95b"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "getPayAmount",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "e0547433b500da84"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "getLockStock",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "3ee02597861858b9"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "getDeductionPerAmount",
-      "domain": "mixed",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "459cb880f74c2e9b"
-      ],
-      "signals": [
-        "order",
-        "deduct"
-      ]
-    },
-    {
-      "name": "getCreateDate",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "8159765e1f4fb8b0"
-      ],
-      "signals": []
-    },
-    {
-      "name": "getConfirmStatus",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "474592d939339743"
-      ],
-      "signals": []
-    },
-    {
-      "name": "getConfirmOvertime",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "0b9224206d77e263"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "getAutoConfirmDay",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "5389be76bfcbaa8e"
-      ],
-      "signals": [
-        "delivery"
+        "sku",
+        "skustock",
+        "pms"
       ]
     },
     {
       "name": "createBrand",
-      "domain": "other",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "a8bffb59c5be64d8"
       ],
-      "signals": []
+      "signals": [
+        "pms"
+      ]
     },
     {
       "name": "cancelUserOrder",
@@ -4721,1134 +4512,8 @@
       ]
     },
     {
-      "name": "andPaymentTimeNotIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "fa4d0b44af35300f"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeNotEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "5937877c9a1a9b4d"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeNotBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "fa4d0b44af35300f"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeLessThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "58879b295cab88b9"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeLessThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "58879b295cab88b9"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeIsNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "5937877c9a1a9b4d"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeIsNotNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "5937877c9a1a9b4d"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "fa4d0b44af35300f"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeGreaterThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "58879b295cab88b9"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeGreaterThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "58879b295cab88b9"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "5937877c9a1a9b4d"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPaymentTimeBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "fa4d0b44af35300f"
-      ],
-      "signals": [
-        "pay",
-        "payment"
-      ]
-    },
-    {
-      "name": "andPayTypeNotIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7efcd369ed2a4a3"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeNotEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "2a7c86971ef80a62"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeNotBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "c0b982bde20d750c"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeLessThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7efcd369ed2a4a3"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeLessThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7efcd369ed2a4a3"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeIsNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "9e8a777437993dbe"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeIsNotNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "9e8a777437993dbe"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7efcd369ed2a4a3"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeGreaterThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "2a7c86971ef80a62"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeGreaterThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "2a7c86971ef80a62"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "2a7c86971ef80a62"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayTypeBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "c0b982bde20d750c"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountNotIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "de28c5be038f0dcd"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountNotEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "ec9c9195e5d3a6c9"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountNotBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "147a4ffac38ae46e"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountLessThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "de28c5be038f0dcd"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountLessThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "de28c5be038f0dcd"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountIsNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "6dc3f139002b4ae0"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountIsNotNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "6dc3f139002b4ae0"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "de28c5be038f0dcd"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountGreaterThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "ec9c9195e5d3a6c9"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountGreaterThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "ec9c9195e5d3a6c9"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "ec9c9195e5d3a6c9"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andPayAmountBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "147a4ffac38ae46e"
-      ],
-      "signals": [
-        "pay"
-      ]
-    },
-    {
-      "name": "andLockStockNotIn",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "703136e39e138c6e"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockNotEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "c24c8b6daaa68eb1"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockNotBetween",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "cf121148159b92a3"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockLessThanOrEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "703136e39e138c6e"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockLessThan",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "703136e39e138c6e"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockIsNull",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a062067afc094100"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockIsNotNull",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a062067afc094100"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockIn",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "703136e39e138c6e"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockGreaterThanOrEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "c24c8b6daaa68eb1"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockGreaterThan",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "c24c8b6daaa68eb1"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "c24c8b6daaa68eb1"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andLockStockBetween",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "cf121148159b92a3"
-      ],
-      "signals": [
-        "stock",
-        "lock"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountNotIn",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "22c09c2541ba4e68"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountNotEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "588906ba07a4eeab"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountNotBetween",
-      "domain": "mixed",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "14948d0329423876"
-      ],
-      "signals": [
-        "order",
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountLessThanOrEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "22c09c2541ba4e68"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountLessThan",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "22c09c2541ba4e68"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountIsNull",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "86bb0876feb35d6e"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountIsNotNull",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "86bb0876feb35d6e"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountIn",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "22c09c2541ba4e68"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountGreaterThanOrEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "588906ba07a4eeab"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountGreaterThan",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "588906ba07a4eeab"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountEqualTo",
-      "domain": "stock",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "588906ba07a4eeab"
-      ],
-      "signals": [
-        "deduct"
-      ]
-    },
-    {
-      "name": "andDeductionPerAmountBetween",
-      "domain": "mixed",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "14948d0329423876"
-      ],
-      "signals": [
-        "order",
-        "deduct"
-      ]
-    },
-    {
-      "name": "andCreateDateNotIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f0041f90119ea0d5"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateNotEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "44bba67e9474b597"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateNotBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f0041f90119ea0d5"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateLessThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "d18ad1cc4df9b944"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateLessThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "d18ad1cc4df9b944"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateIsNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "44bba67e9474b597"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateIsNotNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "44bba67e9474b597"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f0041f90119ea0d5"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateGreaterThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "d18ad1cc4df9b944"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateGreaterThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "d18ad1cc4df9b944"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "44bba67e9474b597"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateDateBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f0041f90119ea0d5"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusNotIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "0be4cd42a5359d2f"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusNotEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "bd48ebafcdad44f7"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusNotBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "0be4cd42a5359d2f"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusLessThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a324238d1a4b95cd"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusLessThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a324238d1a4b95cd"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusIsNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "bd48ebafcdad44f7"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusIsNotNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "bd48ebafcdad44f7"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "0be4cd42a5359d2f"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusGreaterThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a324238d1a4b95cd"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusGreaterThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a324238d1a4b95cd"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "bd48ebafcdad44f7"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmStatusBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "0be4cd42a5359d2f"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeNotIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "906aa9b17aea7456"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeNotEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7a8e6fc6c47bfab"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeNotBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "fc9e117d5e692e7c"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeLessThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "906aa9b17aea7456"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeLessThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "906aa9b17aea7456"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeIsNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a11e729b1815c4bc"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "andConfirmOvertimeIsNotNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "a11e729b1815c4bc"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "andConfirmOvertimeIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "906aa9b17aea7456"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeGreaterThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7a8e6fc6c47bfab"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeGreaterThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7a8e6fc6c47bfab"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "f7a8e6fc6c47bfab"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andConfirmOvertimeBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "fc9e117d5e692e7c"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayNotIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "6f27ee15a9af36aa"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayNotEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "285c6f05e8d32472"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayNotBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "ac425c0c5c312bf6"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayLessThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "6f27ee15a9af36aa"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayLessThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "6f27ee15a9af36aa"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayIsNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "7906c5df9db69e81"
-      ],
-      "signals": [
-        "delivery"
-      ]
-    },
-    {
-      "name": "andAutoConfirmDayIsNotNull",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "7906c5df9db69e81"
-      ],
-      "signals": [
-        "delivery"
-      ]
-    },
-    {
-      "name": "andAutoConfirmDayIn",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "6f27ee15a9af36aa"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayGreaterThanOrEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "285c6f05e8d32472"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayGreaterThan",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "285c6f05e8d32472"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayEqualTo",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "285c6f05e8d32472"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andAutoConfirmDayBetween",
-      "domain": "order",
-      "confidence": 1.0,
-      "evidence_chunks": [
-        "ac425c0c5c312bf6"
-      ],
-      "signals": []
-    },
-    {
       "name": "alipayClient",
-      "domain": "order",
+      "domain": "mixed",
       "confidence": 1.0,
       "evidence_chunks": [
         "93c2b30e8e086946"
@@ -5859,8 +4524,8 @@
     },
     {
       "name": "createCriteriaInternal",
-      "domain": "order",
-      "confidence": 0.987,
+      "domain": "mixed",
+      "confidence": 0.882,
       "evidence_chunks": [
         "01de1299ccfdb7b6",
         "0399e3ba4d106c7b",
@@ -5945,8 +4610,8 @@
     },
     {
       "name": "createCriteria",
-      "domain": "order",
-      "confidence": 0.987,
+      "domain": "mixed",
+      "confidence": 0.882,
       "evidence_chunks": [
         "01de1299ccfdb7b6",
         "0399e3ba4d106c7b",
@@ -6030,441 +4695,28 @@
       ]
     },
     {
-      "name": "andCreateTimeNotIn",
-      "domain": "other",
-      "confidence": 0.857,
+      "name": "updateRecommendStatus",
+      "domain": "mixed",
+      "confidence": 0.75,
       "evidence_chunks": [
-        "10efb3793289301e",
-        "116d510e4fc06af1",
-        "1ab44f4b5f586932",
-        "219c33f9a7924ce3",
-        "2228236e04124a03",
-        "2a734727e79d02ee",
-        "301d8f20e53a2e11",
-        "3c54e93f4f6091a1",
-        "3e349edc29c5efe8",
-        "5d91f8bef847cba3",
-        "7331fdde25354434",
-        "745d3b573f33a1d6",
-        "7bef7f2a24651536",
-        "85691ae6114a5c98",
-        "927b5f868699bd5e",
-        "9d623c43039418c1",
-        "a2df96ff8f7faa6a",
-        "b1907cd89bb30048",
-        "b7d190bffab2f044",
-        "bf1188130283f22e",
-        "c00d937efaa4356d",
-        "ce6e8e81d159fdb5",
-        "cf99b230d88c6369",
-        "d3026163b6b82f89",
-        "de61efcf7dc11bea",
-        "ee49f78c882d190a",
-        "f4240d2304b5e04f",
-        "fd937139da1355c9"
+        "1b5e50cc25e46772",
+        "1c53d9ed57ce29ad",
+        "574b7f3d14d4a4dc",
+        "5c8994e31fc3e0c4",
+        "5e92cb8c8f441332",
+        "8c017c1563def785",
+        "a611dcfd18944b0a",
+        "b48dad72f8a7f66b"
       ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeNotEqualTo",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "07824cd34aea9d1d",
-        "08cae7230223077e",
-        "0d740eb8e3cdd152",
-        "0e3171a21cefb902",
-        "0f31f006d9697e7f",
-        "14b33a2d6d66375c",
-        "1a8d876a636f1549",
-        "3033d9ad1e6e166c",
-        "3437962792dbeb42",
-        "435d82ac0b0a69b2",
-        "44f9344bcf51e46e",
-        "4d6706a3e6ac9289",
-        "53b30858a8cb4efb",
-        "5bd2652ef138540e",
-        "6d65d19a57bfb6f2",
-        "7959573ba24a04fb",
-        "7b68e7e2ba832a1a",
-        "90bfd5559d5e0424",
-        "9b67df67848b76f5",
-        "a779e5506b201e77",
-        "aedc65df0245b04c",
-        "be907d43d3f3c540",
-        "ce84e01af9a81433",
-        "d80d9b5b0a332433",
-        "f1c02928691a799f",
-        "f6a16cad78f95d02",
-        "ff807864a5a02782",
-        "fffe3a46bdb97af2"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeNotBetween",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "03cd36fe11039d63",
-        "13be5b65b5e0f489",
-        "23512c7a25fd1af8",
-        "2a734727e79d02ee",
-        "301d8f20e53a2e11",
-        "38bd97302f17953e",
-        "3c54e93f4f6091a1",
-        "423abce5b0d4a546",
-        "5cfafb13792e60c3",
-        "835a373cc67eb178",
-        "84e90e9da9fd99f3",
-        "85691ae6114a5c98",
-        "85b6565326f96f09",
-        "927b5f868699bd5e",
-        "97bb93566e861587",
-        "a72542b67ade44a5",
-        "aa9ef16c0abd2ac3",
-        "b1907cd89bb30048",
-        "b7d190bffab2f044",
-        "c00d937efaa4356d",
-        "c43405635ad1924d",
-        "cf99b230d88c6369",
-        "d3026163b6b82f89",
-        "e68345534495bc08",
-        "e8989ac979167645",
-        "eb938f7542f7a75b",
-        "f4240d2304b5e04f",
-        "fd937139da1355c9"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeLessThanOrEqualTo",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "0cae4c3017240d4d",
-        "10efb3793289301e",
-        "116d510e4fc06af1",
-        "1ab44f4b5f586932",
-        "219c33f9a7924ce3",
-        "2228236e04124a03",
-        "2b6cbf5f1828d06b",
-        "37203df8f3e2d6a3",
-        "3d48423cdbebe8da",
-        "3e349edc29c5efe8",
-        "4c5b571b4c4c4cf4",
-        "513817dc4b01aa8a",
-        "5d91f8bef847cba3",
-        "7247e7f64722f94b",
-        "7331fdde25354434",
-        "745d3b573f33a1d6",
-        "7bef7f2a24651536",
-        "876a7a8867fe9442",
-        "9d623c43039418c1",
-        "a2df96ff8f7faa6a",
-        "ad7377300730c2c8",
-        "bf1188130283f22e",
-        "c3be987c91244edd",
-        "ce6e8e81d159fdb5",
-        "de61efcf7dc11bea",
-        "ea9fd78643ba784e",
-        "ee49f78c882d190a",
-        "f5b1a8699450014e"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeLessThan",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "0cae4c3017240d4d",
-        "10efb3793289301e",
-        "116d510e4fc06af1",
-        "1ab44f4b5f586932",
-        "219c33f9a7924ce3",
-        "2228236e04124a03",
-        "2b6cbf5f1828d06b",
-        "37203df8f3e2d6a3",
-        "3d48423cdbebe8da",
-        "3e349edc29c5efe8",
-        "4c5b571b4c4c4cf4",
-        "513817dc4b01aa8a",
-        "5d91f8bef847cba3",
-        "7247e7f64722f94b",
-        "7331fdde25354434",
-        "745d3b573f33a1d6",
-        "7bef7f2a24651536",
-        "876a7a8867fe9442",
-        "9d623c43039418c1",
-        "a2df96ff8f7faa6a",
-        "ad7377300730c2c8",
-        "bf1188130283f22e",
-        "c3be987c91244edd",
-        "d80d9b5b0a332433",
-        "ea9fd78643ba784e",
-        "ee49f78c882d190a",
-        "f5b1a8699450014e",
-        "ff807864a5a02782"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeIsNull",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "014b19b96edc6009",
-        "07d834abe8431075",
-        "0d740eb8e3cdd152",
-        "0f31f006d9697e7f",
-        "14b33a2d6d66375c",
-        "1a8d876a636f1549",
-        "233f204f866677bd",
-        "2acd9a9e053da8ae",
-        "3033d9ad1e6e166c",
-        "365f3aecf12e1448",
-        "3a5fb55381a45e4b",
-        "3fc1321f26378601",
-        "44f9344bcf51e46e",
-        "56353f2bd3960fde",
-        "5a0fb4d9fa5ce79a",
-        "5a7b0fd79b5a837a",
-        "663815733cf5a850",
-        "7959573ba24a04fb",
-        "8221a8b48f12d2ad",
-        "90bfd5559d5e0424",
-        "995e67e4cd2fda9b",
-        "9fdb2f3e690a3279",
-        "a48ef9c6cc1cdf13",
-        "ad15622b5461485d",
-        "aedc65df0245b04c",
-        "be907d43d3f3c540",
-        "c40ef059604cfc07",
-        "f6a16cad78f95d02"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeIsNotNull",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "014b19b96edc6009",
-        "07d834abe8431075",
-        "0d740eb8e3cdd152",
-        "0f31f006d9697e7f",
-        "14b33a2d6d66375c",
-        "1a8d876a636f1549",
-        "233f204f866677bd",
-        "2acd9a9e053da8ae",
-        "3033d9ad1e6e166c",
-        "365f3aecf12e1448",
-        "3a5fb55381a45e4b",
-        "3fc1321f26378601",
-        "44f9344bcf51e46e",
-        "4d6706a3e6ac9289",
-        "5a0fb4d9fa5ce79a",
-        "5a7b0fd79b5a837a",
-        "663815733cf5a850",
-        "7959573ba24a04fb",
-        "8221a8b48f12d2ad",
-        "90bfd5559d5e0424",
-        "995e67e4cd2fda9b",
-        "9fdb2f3e690a3279",
-        "a48ef9c6cc1cdf13",
-        "ad15622b5461485d",
-        "aedc65df0245b04c",
-        "be907d43d3f3c540",
-        "c40ef059604cfc07",
-        "f6a16cad78f95d02"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeIn",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "10efb3793289301e",
-        "116d510e4fc06af1",
-        "1ab44f4b5f586932",
-        "219c33f9a7924ce3",
-        "2228236e04124a03",
-        "2a734727e79d02ee",
-        "301d8f20e53a2e11",
-        "3c54e93f4f6091a1",
-        "3e349edc29c5efe8",
-        "5d91f8bef847cba3",
-        "7331fdde25354434",
-        "745d3b573f33a1d6",
-        "7bef7f2a24651536",
-        "85691ae6114a5c98",
-        "9d623c43039418c1",
-        "a2df96ff8f7faa6a",
-        "b1907cd89bb30048",
-        "b7d190bffab2f044",
-        "bf1188130283f22e",
-        "c00d937efaa4356d",
-        "ce6e8e81d159fdb5",
-        "cf99b230d88c6369",
-        "d3026163b6b82f89",
-        "de61efcf7dc11bea",
-        "ea9fd78643ba784e",
-        "ee49f78c882d190a",
-        "f4240d2304b5e04f",
-        "fd937139da1355c9"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeGreaterThanOrEqualTo",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "07824cd34aea9d1d",
-        "08cae7230223077e",
-        "0cae4c3017240d4d",
-        "0e3171a21cefb902",
-        "2b6cbf5f1828d06b",
-        "3437962792dbeb42",
-        "37203df8f3e2d6a3",
-        "3d48423cdbebe8da",
-        "435d82ac0b0a69b2",
-        "4c5b571b4c4c4cf4",
-        "513817dc4b01aa8a",
-        "53b30858a8cb4efb",
-        "5bd2652ef138540e",
-        "6d65d19a57bfb6f2",
-        "7247e7f64722f94b",
-        "7b68e7e2ba832a1a",
-        "876a7a8867fe9442",
-        "9b67df67848b76f5",
-        "a779e5506b201e77",
-        "ad7377300730c2c8",
-        "c3be987c91244edd",
-        "ce84e01af9a81433",
-        "d80d9b5b0a332433",
-        "ea9fd78643ba784e",
-        "f1c02928691a799f",
-        "f5b1a8699450014e",
-        "ff807864a5a02782",
-        "fffe3a46bdb97af2"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeGreaterThan",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "07824cd34aea9d1d",
-        "08cae7230223077e",
-        "0cae4c3017240d4d",
-        "0e3171a21cefb902",
-        "2b6cbf5f1828d06b",
-        "3437962792dbeb42",
-        "37203df8f3e2d6a3",
-        "3d48423cdbebe8da",
-        "435d82ac0b0a69b2",
-        "4c5b571b4c4c4cf4",
-        "4d6706a3e6ac9289",
-        "513817dc4b01aa8a",
-        "53b30858a8cb4efb",
-        "5bd2652ef138540e",
-        "6d65d19a57bfb6f2",
-        "7247e7f64722f94b",
-        "7b68e7e2ba832a1a",
-        "876a7a8867fe9442",
-        "9b67df67848b76f5",
-        "a779e5506b201e77",
-        "ad7377300730c2c8",
-        "c3be987c91244edd",
-        "ce84e01af9a81433",
-        "d80d9b5b0a332433",
-        "f1c02928691a799f",
-        "f5b1a8699450014e",
-        "ff807864a5a02782",
-        "fffe3a46bdb97af2"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeEqualTo",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "07824cd34aea9d1d",
-        "08cae7230223077e",
-        "0d740eb8e3cdd152",
-        "0e3171a21cefb902",
-        "0f31f006d9697e7f",
-        "14b33a2d6d66375c",
-        "1a8d876a636f1549",
-        "233f204f866677bd",
-        "3033d9ad1e6e166c",
-        "3437962792dbeb42",
-        "435d82ac0b0a69b2",
-        "44f9344bcf51e46e",
-        "4d6706a3e6ac9289",
-        "53b30858a8cb4efb",
-        "5bd2652ef138540e",
-        "6d65d19a57bfb6f2",
-        "7959573ba24a04fb",
-        "7b68e7e2ba832a1a",
-        "90bfd5559d5e0424",
-        "9b67df67848b76f5",
-        "a779e5506b201e77",
-        "aedc65df0245b04c",
-        "be907d43d3f3c540",
-        "c40ef059604cfc07",
-        "ce84e01af9a81433",
-        "f1c02928691a799f",
-        "f6a16cad78f95d02",
-        "fffe3a46bdb97af2"
-      ],
-      "signals": []
-    },
-    {
-      "name": "andCreateTimeBetween",
-      "domain": "other",
-      "confidence": 0.857,
-      "evidence_chunks": [
-        "13be5b65b5e0f489",
-        "23512c7a25fd1af8",
-        "2a734727e79d02ee",
-        "301d8f20e53a2e11",
-        "38bd97302f17953e",
-        "3c54e93f4f6091a1",
-        "423abce5b0d4a546",
-        "835a373cc67eb178",
-        "84e90e9da9fd99f3",
-        "85691ae6114a5c98",
-        "85b6565326f96f09",
-        "927b5f868699bd5e",
-        "97bb93566e861587",
-        "a72542b67ade44a5",
-        "aa9ef16c0abd2ac3",
-        "b1907cd89bb30048",
-        "b7d190bffab2f044",
-        "c00d937efaa4356d",
-        "c43405635ad1924d",
-        "ce6e8e81d159fdb5",
-        "cf99b230d88c6369",
-        "d3026163b6b82f89",
-        "de61efcf7dc11bea",
-        "e68345534495bc08",
-        "e8989ac979167645",
-        "eb938f7542f7a75b",
-        "f4240d2304b5e04f",
-        "fd937139da1355c9"
-      ],
-      "signals": []
+      "signals": [
+        "order",
+        "pms"
+      ]
     },
     {
       "name": "updateStatus",
       "domain": "order",
-      "confidence": 0.833,
+      "confidence": 0.667,
       "evidence_chunks": [
         "1ae122f377240db0",
         "1b569fa9ac8c6cfe",
@@ -6479,9 +4731,145 @@
       ]
     },
     {
+      "name": "cancelTimeOutOrder",
+      "domain": "order",
+      "confidence": 0.667,
+      "evidence_chunks": [
+        "19ed9c3491876de5",
+        "90faa8ee59f346e6",
+        "c72a05ca3a40458a"
+      ],
+      "signals": [
+        "order",
+        "oms",
+        "cancel",
+        "sku",
+        "pay",
+        "stock",
+        "lock",
+        "release"
+      ]
+    },
+    {
+      "name": "webPay",
+      "domain": "mixed",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "146a1e66ce235224",
+        "6fc5bdd08cc4f06a"
+      ],
+      "signals": [
+        "pay",
+        "trade"
+      ]
+    },
+    {
+      "name": "paySuccess",
+      "domain": "order",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "4f041945b4e436da",
+        "90faa8ee59f346e6"
+      ],
+      "signals": [
+        "order",
+        "oms",
+        "pay",
+        "cancel",
+        "payment",
+        "stock",
+        "sku",
+        "reduce"
+      ]
+    },
+    {
+      "name": "pay",
+      "domain": "mixed",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "146a1e66ce235224",
+        "7fa2bfaaed828ee2"
+      ],
+      "signals": [
+        "pay",
+        "order",
+        "oms",
+        "trade"
+      ]
+    },
+    {
+      "name": "getUpdateInfo",
+      "domain": "mixed",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "9b5877883d6fb0c6",
+        "ae2b7c810b1e34b4"
+      ],
+      "signals": [
+        "pms",
+        "stock",
+        "sku",
+        "skustock"
+      ]
+    },
+    {
+      "name": "cancelOrder",
+      "domain": "order",
+      "confidence": 0.5,
+      "evidence_chunks": [
+        "17d9bc3b00dac599",
+        "90faa8ee59f346e6"
+      ],
+      "signals": [
+        "order",
+        "oms",
+        "cancel",
+        "pay",
+        "stock",
+        "sku",
+        "release"
+      ]
+    },
+    {
+      "name": "update",
+      "domain": "mixed",
+      "confidence": 0.476,
+      "evidence_chunks": [
+        "01f8c3a48e05e7ea",
+        "09fa9abbcd47cab5",
+        "17d10e50e2333bdf",
+        "1990f6a3fdf5c3fc",
+        "221659f5c1b5c0a8",
+        "2fe898829f6316d8",
+        "32563d36b754ad0b",
+        "38cf26d3fec66e42",
+        "3f459b1b7f1dedb3",
+        "3fe60a97f662577a",
+        "4502693d16601f36",
+        "582b09d2025d1e08",
+        "72cea8b8180e8b9f",
+        "74db48a6ad4d8455",
+        "7a3bc976531092f0",
+        "97adcea7d2061671",
+        "9811c73421ddbee1",
+        "ad1f2f346a669ce2",
+        "e55d31f2f3fd1126",
+        "f0a598987d5ec717",
+        "f76a36d6e40e6dd4"
+      ],
+      "signals": [
+        "pms",
+        "order",
+        "oms",
+        "stock",
+        "sku",
+        "skustock"
+      ]
+    },
+    {
       "name": "create",
       "domain": "other",
-      "confidence": 0.692,
+      "confidence": 0.423,
       "evidence_chunks": [
         "01f8c3a48e05e7ea",
         "09fa9abbcd47cab5",
@@ -6511,163 +4899,12 @@
         "f1b0c52b9aebc85a"
       ],
       "signals": [
+        "pms",
         "order",
         "oms",
-        "stock",
-        "sku"
-      ]
-    },
-    {
-      "name": "cancelTimeOutOrder",
-      "domain": "order",
-      "confidence": 0.667,
-      "evidence_chunks": [
-        "19ed9c3491876de5",
-        "90faa8ee59f346e6",
-        "c72a05ca3a40458a"
-      ],
-      "signals": [
-        "order",
-        "oms",
-        "cancel",
-        "sku",
-        "pay",
-        "stock",
-        "lock",
-        "release"
-      ]
-    },
-    {
-      "name": "setCreateTime",
-      "domain": "other",
-      "confidence": 0.556,
-      "evidence_chunks": [
-        "16a3849406a1324f",
-        "2084e4584414de8a",
-        "51f0f4fde5248b0f",
-        "630d2c3ddad3bb57",
-        "670a3b39310a05ae",
-        "749972de49fe7985",
-        "8041fcd850933afa",
-        "ebbca91a3d92747f",
-        "fbae7b2e16421c31"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "getCreateTime",
-      "domain": "other",
-      "confidence": 0.556,
-      "evidence_chunks": [
-        "0396a470976a797d",
-        "16a3849406a1324f",
-        "2084e4584414de8a",
-        "51f0f4fde5248b0f",
-        "630d2c3ddad3bb57",
-        "670a3b39310a05ae",
-        "8041fcd850933afa",
-        "ebbca91a3d92747f",
-        "fbae7b2e16421c31"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "update",
-      "domain": "other",
-      "confidence": 0.524,
-      "evidence_chunks": [
-        "01f8c3a48e05e7ea",
-        "09fa9abbcd47cab5",
-        "17d10e50e2333bdf",
-        "1990f6a3fdf5c3fc",
-        "221659f5c1b5c0a8",
-        "2fe898829f6316d8",
-        "32563d36b754ad0b",
-        "38cf26d3fec66e42",
-        "3f459b1b7f1dedb3",
-        "3fe60a97f662577a",
-        "4502693d16601f36",
-        "582b09d2025d1e08",
-        "72cea8b8180e8b9f",
-        "74db48a6ad4d8455",
-        "7a3bc976531092f0",
-        "97adcea7d2061671",
-        "9811c73421ddbee1",
-        "ad1f2f346a669ce2",
-        "e55d31f2f3fd1126",
-        "f0a598987d5ec717",
-        "f76a36d6e40e6dd4"
-      ],
-      "signals": [
-        "order",
-        "oms",
-        "stock",
-        "sku"
-      ]
-    },
-    {
-      "name": "updateRecommendStatus",
-      "domain": "other",
-      "confidence": 0.5,
-      "evidence_chunks": [
-        "1b5e50cc25e46772",
-        "1c53d9ed57ce29ad",
-        "574b7f3d14d4a4dc",
-        "5c8994e31fc3e0c4",
-        "5e92cb8c8f441332",
-        "8c017c1563def785",
-        "a611dcfd18944b0a",
-        "b48dad72f8a7f66b"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "updateNavStatus",
-      "domain": "other",
-      "confidence": 0.5,
-      "evidence_chunks": [
-        "7d824737d8a0b6ed",
-        "c1728d2fd25c18ee"
-      ],
-      "signals": [
-        "order"
-      ]
-    },
-    {
-      "name": "getUpdateInfo",
-      "domain": "other",
-      "confidence": 0.5,
-      "evidence_chunks": [
-        "9b5877883d6fb0c6",
-        "ae2b7c810b1e34b4"
-      ],
-      "signals": [
-        "stock",
-        "sku"
-      ]
-    },
-    {
-      "name": "cancelOrder",
-      "domain": "order",
-      "confidence": 0.5,
-      "evidence_chunks": [
-        "17d9bc3b00dac599",
-        "90faa8ee59f346e6"
-      ],
-      "signals": [
-        "order",
-        "oms",
-        "cancel",
-        "pay",
         "stock",
         "sku",
-        "release"
+        "skustock"
       ]
     }
   ],
@@ -6685,28 +4922,21 @@
         },
         {
           "idx": 2,
-          "operation": "isAccountNonLocked",
-          "evidence_chunk": "1816e8512cabf3dd",
+          "operation": "lockStock",
+          "evidence_chunk": "3590e1ff95c27765",
           "why": "锁定库存/预占库存"
         },
         {
           "idx": 3,
-          "operation": "webPay",
-          "evidence_chunk": "146a1e66ce235224",
+          "operation": "paySuccessByOrderSn",
+          "evidence_chunk": "e6c51e5601cc37c9",
           "why": "支付回调/支付通知"
-        },
-        {
-          "idx": 4,
-          "operation": "setDeductionPerAmount",
-          "evidence_chunk": "459cb880f74c2e9b",
-          "why": "扣减库存/确认扣减"
         }
       ],
       "evidence_chunks": [
-        "146a1e66ce235224",
-        "1816e8512cabf3dd",
-        "459cb880f74c2e9b",
-        "7147572a9e293e26"
+        "3590e1ff95c27765",
+        "7147572a9e293e26",
+        "e6c51e5601cc37c9"
       ]
     },
     {
@@ -6716,13 +4946,13 @@
       "steps": [
         {
           "idx": 1,
-          "operation": "webPay",
-          "evidence_chunk": "146a1e66ce235224",
+          "operation": "paySuccessByOrderSn",
+          "evidence_chunk": "e6c51e5601cc37c9",
           "why": "处理支付回调并驱动状态流转"
         }
       ],
       "evidence_chunks": [
-        "146a1e66ce235224"
+        "e6c51e5601cc37c9"
       ]
     }
   ]

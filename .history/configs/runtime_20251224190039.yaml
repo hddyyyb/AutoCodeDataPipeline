@@ -1,0 +1,10 @@
+language:
+  mode: zh        # zh | en | bilingual
+
+sft:
+  mode: grounded            # light | grounded
+  format: text           # text | messages
+  evidence_max: 2        # grounded模式下最多附带几段证据代码
+  evidence_max_lines: 60 # 每段证据最多多少行
+  evidence_max_chars: 4000 # 每段证据最多多少字符
+  trace_digest_max: 6    # trace_digest最多保留几步

@@ -33,24 +33,41 @@ from collections import defaultdict
 ROOT = Path(__file__).resolve().parents[1]
 
 
-# 规则信号:用于在代码中发现“业务约束/一致性/幂等/事务/异常”的线索
 RULE_PATTERNS = [
-    # 状态机/状态判断
     ("order_status_guard", re.compile(r"\b(status|Status|orderStatus|OrderStatus)\b.*(==|!=|equals)\b", re.I), ["order", "status"]),
     ("state_transition", re.compile(r"(change|update).*(status|Status)|set.*Status", re.I), ["order", "status"]),
-    # 库存锁定/扣减/释放
-    ("stock_lock", re.compile(r"\b(lock|reserve)\w*\b.*\b(stock|inventory|sku)\b|\b(stock|inventory)\b.*\b(lock|reserve)\w*\b", re.I), ["stock", "lock"]),
-    ("stock_deduct", re.compile(r"\b(deduct|reduce|decrease)\w*\b.*\b(stock|inventory|sku)\b|\b(stock|inventory)\b.*\b(deduct|reduce|decrease)\w*\b", re.I), ["stock", "deduct"]),
-    ("stock_release", re.compile(r"\b(release|unlock)\w*\b.*\b(stock|inventory|sku)\b|\b(stock|inventory)\b.*\b(release|unlock)\w*\b", re.I), ["stock", "release"]),
-    # 幂等/重复请求
+    #("stock_lock", re.compile(r"\b(lock|reserve)\w*\b.*\b(stock|inventory|sku)\b|\b(stock|inventory)\b.*\b(lock|reserve)\w*\b", re.I), ["stock", "lock"]),
+    #("stock_deduct", re.compile(r"\b(deduct|reduce|decrease)\w*\b.*\b(stock|inventory|sku)\b|\b(stock|inventory)\b.*\b(deduct|reduce|decrease)\w*\b", re.I), ["stock", "deduct"]),
+    #("stock_release", re.compile(r"\b(release|unlock)\w*\b.*\b(stock|inventory|sku)\b|\b(stock|inventory)\b.*\b(release|unlock)\w*\b", re.I), ["stock", "release"]),
+    # 库存锁定/扣减/释放(覆盖Java+MyBatis XML/SQL常见写法)
+    ("stock_lock", re.compile(
+        r"(lockStock|lock_stock|set\s+lock_stock|lock_stock\s*=\s*lock_stock\s*\+|"
+        r"\b(lock|reserve)\w*\b.*\b(stock|sku|inventory)\b|"
+        r"\b(stock|sku|inventory)\b.*\b(lock|reserve)\w*\b)",
+        re.I
+    ), ["stock", "lock"]),
+
+    # 注意：扣减必须同时出现stock/sku/inventory语境，避免“deductionPerAmount”这种非库存扣减误伤
+    ("stock_deduct", re.compile(
+        r"(reduceStock|deductStock|reduce_stock|deduct_stock|"
+        r"\b(stock|sku|inventory)\b.*(deduct|reduce|decrease)\w*|"
+        r"(deduct|reduce|decrease)\w*.*\b(stock|sku|inventory)\b|"
+        r"\bstock\s*=\s*stock\s*-\s*|\bstock\s*-\=\s*)",
+        re.I
+    ), ["stock", "deduct"]),
+
+    ("stock_release", re.compile(
+        r"(unlockStock|releaseStock|release_stock|unlock_stock|"
+        r"lock_stock\s*=\s*lock_stock\s*-\s*|"
+        r"\b(release|unlock)\w*\b.*\b(stock|sku|inventory)\b|"
+        r"\b(stock|sku|inventory)\b.*\b(release|unlock)\w*\b)",
+        re.I
+    ), ["stock", "release"]),
+
     ("idempotency", re.compile(r"\b(idempotent|幂等|duplicate|重复)\b|requestId|uniqueKey|nonce", re.I), ["idempotency"]),
-    # 事务一致性
     ("transaction", re.compile(r"@Transactional|\btransaction\b|\brollback\b", re.I), ["transaction"]),
-    # 异常/失败分支
     ("exception", re.compile(r"throw\s+new|RuntimeException|BusinessException|IllegalArgumentException|return\s+false", re.I), ["exception"]),
-    # 并发/锁
     ("concurrency", re.compile(r"\block\b|synchronized|redis.*lock|redisson|select\s+for\s+update", re.I), ["concurrency"]),
-    # 超时/关闭
     ("timeout_close", re.compile(r"\btimeout\b|closeOrder|cancelOrder|auto.*close", re.I), ["order", "timeout"]),
 ]
 
@@ -96,10 +113,6 @@ def infer_domain_from_tags(tags: List[str]) -> str:
     return "mixed"
 
 
-# =========================
-# English helpers(最小可控模板,不依赖外部翻译)
-# =========================
-
 TITLE_EN_MAP = {
     "order_status_guard": "Order status guard and validation",
     "state_transition": "Order status transition update",
@@ -112,6 +125,37 @@ TITLE_EN_MAP = {
     "concurrency": "Concurrency control and locking",
     "timeout_close": "Timeout close and cancellation",
 }
+
+# 业务步骤中文标签 -> 英文(用于flow step对齐;不覆盖name_en(方法名拆词))
+BIZ_STEP_ZH_TO_EN = {
+    "创建订单/提交订单": "Create/submit order",
+    "锁定库存/预占库存": "Lock/reserve stock",
+    "支付回调/支付通知": "Payment callback/notification",
+    "扣减库存/确认扣减": "Deduct/confirm stock",
+    "取消/关闭订单": "Cancel/close order",
+    "释放库存/解锁库存": "Release/unlock stock",
+    "处理支付回调并驱动状态流转": "Handle payment callback and drive status transition",
+}
+
+def biz_step_en(zh: str) -> str:
+    zh = (zh or "").strip()
+    if not zh:
+        return ""
+    parts = [p.strip() for p in re.split(r"[\/]+", zh) if p.strip()]
+    mapped = []
+    for p in parts:
+        mapped.append(BIZ_STEP_ZH_TO_EN.get(p, BIZ_STEP_ZH_TO_EN.get(zh, "")))
+    mapped = [m for m in mapped if m]
+    if mapped:
+        seen = set()
+        out = []
+        for m in mapped:
+            if m not in seen:
+                out.append(m)
+                seen.add(m)
+        return " / ".join(out)
+    return ""
+
 
 def title_from_types_zh(types: List[str]) -> str:
     mapping = {
@@ -189,7 +233,6 @@ def flow_name_en_from_zh_or_ops(flow: Dict[str, Any]) -> str:
     name = flow.get("name") or ""
     if name and not has_cjk(name):
         return name.strip()
-    # 从steps.op拼一个可读英文flow名
     ops = []
     for s in flow.get("steps", []) or []:
         op = s.get("op") or ""
@@ -215,7 +258,7 @@ def build_flow_records(domain_map: Dict[str, Any]) -> List[Dict[str, Any]]:
         flow_obj = {
             "flow_id": flow_id,
             "name": f.get("name", flow_id),
-            "name_en": "",  # 新增
+            "name_en": "",
             "domain": domain,
             "steps": steps,
             "evidence_chunks": ev,
@@ -225,37 +268,34 @@ def build_flow_records(domain_map: Dict[str, Any]) -> List[Dict[str, Any]]:
             }
         }
 
-        # 最小补充英文flow名
         flow_obj["name_en"] = flow_name_en_from_zh_or_ops(flow_obj)
 
-        # 可选: step.name_en(仅当name含中文时补)
         for s in flow_obj.get("steps", []) or []:
-            # 兼容 domain_map 里用 operation 的情况
             op = s.get("op") or s.get("operation") or ""
             if op and ("op" not in s or not s.get("op")):
-                s["op"] = op  # 给Step04用
+                s["op"] = op
 
-            # 用why作为中文展示名（更像业务步骤），否则用op
             if not s.get("name"):
                 s["name"] = s.get("why") or op or f"step{s.get('idx') or s.get('index') or ''}"
 
-            # 英文名：如果已有就不覆盖；否则用op拆词
+            # 业务语义英文对齐:不影响中文训练,仅新增why_en字段
+            if s.get("why") and not s.get("why_en"):
+                s["why_en"] = biz_step_en(s.get("why"))
+            if (not s.get("why_en")) and s.get("name") and has_cjk(s.get("name")):
+                s["why_en"] = biz_step_en(s.get("name"))
+
+            # 方法名英文可读化(保持原策略)
             if not s.get("name_en"):
                 if op:
                     s["name_en"] = split_camel(op) or op
                 else:
                     s["name_en"] = "step"
 
-
         flows.append(flow_obj)
     return flows
 
 
 def collect_rule_candidates(index_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    从repo_index扫描规则信号,生成候选规则.
-    规则粒度:chunk级别(避免细到行级导致噪声大)
-    """
     candidates = []
     for r in index_rows:
         content = r.get("content", "")
@@ -285,12 +325,6 @@ def collect_rule_candidates(index_rows: List[Dict[str, Any]]) -> List[Dict[str, 
 
 
 def aggregate_rules(cands: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    聚合规则:
-    - key: (signature, types) 近似
-    - 合并evidence_chunks
-    - 生成中英文title/description模板
-    """
     buckets: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
     for c in cands:
@@ -302,9 +336,9 @@ def aggregate_rules(cands: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             buckets[key] = {
                 "rule_id": rid,
                 "title": title_from_types_zh(types),
-                "title_en": title_from_types_en(types),            # 新增
+                "title_en": title_from_types_en(types),
                 "description": desc_from_types_zh(types, tags),
-                "description_en": desc_from_types_en(types, tags), # 新增
+                "description_en": desc_from_types_en(types, tags),
                 "domain": infer_domain_from_tags(tags),
                 "types": types,
                 "tags": tags,
@@ -341,10 +375,6 @@ def aggregate_rules(cands: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def build_flow_to_rule_links(flows: List[Dict[str, Any]], rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    给流程附加related_rules,用于后续QA生成时更容易产生“规则型问题”.
-    关联方式:共享evidence_chunks或tag/domain匹配
-    """
     rule_by_chunk = defaultdict(list)
     for r in rules:
         for cid in r["evidence_chunks"]:
@@ -383,24 +413,19 @@ def main() -> None:
     domain_map = load_domain_map(domain_map_path)
     print("DEBUG: candidate_flows =", len(domain_map.get("candidate_flows", [])))
 
-    # 1) flows
     flows = build_flow_records(domain_map)
 
-    # 2) rules
     cands = collect_rule_candidates(index_rows)
     print("DEBUG: rule candidates =", len(cands))
     rules = aggregate_rules(cands)
 
-    # 3) flow<->rule links
     flows = build_flow_to_rule_links(flows, rules)
 
-    # 输出全量
     rules_path = ROOT / "data/extracted/rules.jsonl"
     flows_path = ROOT / "data/extracted/flows.jsonl"
     write_jsonl(rules_path, rules)
     write_jsonl(flows_path, flows)
 
-    # 输出sample便于提交
     sample_rules_path = ROOT / "data/samples/rules_sample.jsonl"
     sample_flows_path = ROOT / "data/samples/flows_sample.jsonl"
     write_jsonl(sample_rules_path, rules[:80])

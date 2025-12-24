@@ -1,5 +1,5 @@
 language:
-  mode: bilingual        # zh | en | bilingual
+  mode: zh        # zh | en | bilingual
 
 sft:
   mode: grounded            # light | grounded

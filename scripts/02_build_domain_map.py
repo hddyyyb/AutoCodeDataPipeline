@@ -24,16 +24,48 @@ from typing import Dict, List, Tuple, Iterable, Any, Set
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
+# ORDER_KWS如果包含很多泛词会更容易压过stock
 # 简单关键词表,用于order/stock二域判别
 ORDER_KWS = [
     "order", "oms", "cart", "pay", "payment", "refund", "cancel",
     "receiver", "shipment", "delivery", "trade", "checkout"
 ]
+
+# STOCK_KWS扩充到至少包含这些
 STOCK_KWS = [
-    "stock", "sku", "inventory", "lock", "deduct", "release",
-    "ware", "warehouse", "store", "reserve"
+    "stock", "sku", "inventory",
+    "lock", "unlock", "release", "reserve",
+    "deduct", "reduce", "decrease",
+    "restore", "rollback", "revert",
+    "sku_stock", "skustock", "lock_stock",
+    "pmsku", "pms_sku", "pms"
 ]
+
+# 强特征：只要出现就强推stock
+STRONG_STOCK_PATTERNS = [
+    r"\block_stock\b",
+    r"\brelease_stock\b",
+    r"\bunlock_stock\b",
+    r"\breduce_stock\b",
+    r"\bdeduct_stock\b",
+    r"\bsku_stock\b",
+    r"\bpms_?sku\b",
+    r"\bpms_?sku_?stock\b",
+    r"\blockstock\b",
+    r"\bunlockstock\b",
+    r"\breleasestock\b",
+    r"\breducestock\b",
+    r"\bdeductstock\b",
+    # SQL形态：stock = stock - ? 或 stock>=?
+    r"\bstock\s*=\s*stock\s*-\s*",
+    r"\bstock\s*-\=\s*",
+    r"\bstock\s*>=\s*",
+]
+
+# stock动作词给更高权重
+STOCK_ACTION_KWS = {"lock", "unlock", "release", "reserve", "deduct", "reduce", "decrease", "restore", "rollback", "revert"}
+
+
 
 # 分层边界启发式规则(路径+注解/类名线索)
 BOUNDARY_RULES = {
@@ -76,22 +108,49 @@ def norm_text(s: str) -> str:
 
 def domain_score(text: str) -> Tuple[int, int]:
     t = norm_text(text)
-    o = sum(1 for k in ORDER_KWS if k in t)
-    s = sum(1 for k in STOCK_KWS if k in t)
+
+    # 先做强特征命中：直接给一个很大的stock分，避免被order泛词压住
+    strong_hit = any(re.search(p, t, flags=re.I) for p in STRONG_STOCK_PATTERNS)
+
+    o = 0
+    for k in ORDER_KWS:
+        if k in t:
+            o += 1
+
+    s = 0
+    for k in STOCK_KWS:
+        if k in t:
+            # 动作词权重大
+            if k in STOCK_ACTION_KWS:
+                s += 3
+            else:
+                s += 1
+
+    if strong_hit:
+        s += 6  # 你可以调大/调小；6基本能把lockStock从mixed拉回stock
+
     return o, s
 
 
 def choose_domain(text: str) -> Tuple[str, float]:
     o, s = domain_score(text)
+
     if o == 0 and s == 0:
         return "other", 0.0
-    if o > s:
-        conf = o / max(1, o + s)
-        return "order", round(conf, 3)
-    if s > o:
+
+    # 加一个“差值阈值”，避免1:1或1:2这种边缘情况乱跳mixed
+    # 2调到3更保守
+    if s >= o + 2:
         conf = s / max(1, o + s)
         return "stock", round(conf, 3)
-    return "mixed", 0.5
+
+    if o >= s + 2:
+        conf = o / max(1, o + s)
+        return "order", round(conf, 3)
+
+    # 边缘情况给mixed，但把置信度按接近程度输出
+    conf = max(o, s) / max(1, o + s)
+    return "mixed", round(conf, 3)
 
 
 def infer_boundary(file_path: str, content: str) -> str:
@@ -188,11 +247,93 @@ def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     flows = []
     # 从操作名里启发式挑“候选步骤”
     place_ops = [o for o in by_domain["order"] if any(k in o["name"].lower() for k in ["create", "submit", "place", "confirm"])]
-    stock_lock_ops = [o for o in ops if any(k in o["name"].lower() for k in ["lock", "reserve"])]
+    
+    def _looks_like_false_stock_lock(op: Dict[str, Any]) -> bool:
+        """快速止血:排除账号/鉴权/安全相关的lock语义,避免误把isAccountNonLocked当作库存锁定"""
+        n = (op.get("name") or "").lower()
+        sigs = set([str(s).lower() for s in (op.get("signals") or [])])
+
+        blacklist = {
+            "account", "user", "auth", "security", "login", "logout",
+            "role", "permission", "credential", "token", "session",
+            "nonlocked", "non_lock", "locked", "credentials", "principal"
+        }
+        if any(b in n for b in blacklist):
+            return True
+        if any(b in sigs for b in blacklist):
+            return True
+        # Spring Security常见接口方法
+        if n.startswith("isaccount") or n.startswith("iscredentials") or "authorit" in n:
+            return True
+        return False
+
+    def _looks_like_stock_related(op: Dict[str, Any]) -> bool:
+        """强约束:要求domain或signals具备库存语义信号"""
+        dom = (op.get("domain") or "").lower()
+        if dom in ("stock", "mixed"):
+            return True
+        sigs = set([str(s).lower() for s in (op.get("signals") or [])])
+        stock_sem = {"stock", "inventory", "sku", "ware", "warehouse", "reserve", "deduct", "release", "lock", "unlock"}
+        return bool(sigs & stock_sem)
+
+    stock_lock_ops = [
+        o for o in ops
+        if any(k in o["name"].lower() for k in ["lock", "reserve"])
+        and _looks_like_stock_related(o)
+        and not _looks_like_false_stock_lock(o)
+    ]
     stock_deduct_ops = [o for o in ops if "deduct" in o["name"].lower() or "reduce" in o["name"].lower()]
-    pay_ops = [o for o in by_domain["order"] if any(k in o["name"].lower() for k in ["pay", "callback", "notify"])]
-    cancel_ops = [o for o in by_domain["order"] if "cancel" in o["name"].lower() or "close" in o["name"].lower()]
-    stock_release_ops = [o for o in ops if "release" in o["name"].lower() or "unlock" in o["name"].lower()]
+    def _looks_like_order_related(op: Dict[str, Any]) -> bool:
+        dom = (op.get("domain") or "").lower()
+        if dom in ("order", "mixed"):
+            return True
+        sigs = set([str(s).lower() for s in (op.get("signals") or [])])
+        order_sem = {"order", "oms", "cart", "pay", "payment", "refund", "cancel", "close", "receiver", "shipment", "delivery", "trade", "checkout"}
+        return bool(sigs & order_sem)
+
+    def _looks_like_stock_related(op: Dict[str, Any]) -> bool:
+        dom = (op.get("domain") or "").lower()
+        if dom in ("stock", "mixed"):
+            return True
+        sigs = set([str(s).lower() for s in (op.get("signals") or [])])
+        stock_sem = {"stock", "inventory", "sku", "ware", "warehouse", "reserve", "deduct", "release", "lock", "unlock"}
+        return bool(sigs & stock_sem)
+
+    # 1) 支付相关(不再只看by_domain["order"])
+    pay_ops = [
+        o for o in ops
+        if any(k in o["name"].lower() for k in ["pay", "callback", "notify"])
+        and _looks_like_order_related(o)
+    ]
+
+    # 2) 取消/关闭/超时(同理)
+    cancel_ops = [
+        o for o in ops
+        if any(k in o["name"].lower() for k in ["cancel", "close", "timeout"])
+        and _looks_like_order_related(o)
+    ]
+
+    # 3) 释放/解锁库存(必须stock语义，否则容易拼到unlockAccount之类)
+    stock_release_ops = [
+        o for o in ops
+        if any(k in o["name"].lower() for k in ["release", "unlock", "unfreeze"])
+        and _looks_like_stock_related(o)
+        and not _looks_like_false_stock_lock(o)  # 复用你已有的“账号锁”排除逻辑
+    ]
+
+    # 4) 退款/逆向(从全量ops取)
+    refund_ops = [
+        o for o in ops
+        if any(k in o["name"].lower() for k in ["refund", "reverse"])
+        and _looks_like_order_related(o)
+    ]
+
+    # 5) 回补/回滚(必须stock语义，否则rollbackTransaction之类会误拼)
+    restore_ops = [
+        o for o in ops
+        if any(k in o["name"].lower() for k in ["restore", "rollback", "revert", "increase"])
+        and _looks_like_stock_related(o)
+    ]
 
     # 每个步骤从候选池里选一个“代表操作”
     def pick_one(cands: List[Dict[str, Any]]) -> Dict[str, Any] | None:
@@ -219,6 +360,35 @@ def build_candidate_flows(ops: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     if len(step_list) >= 2:
         flows.append(_format_flow("place_order", "place_order", "mixed", step_list))
+
+
+    '''# 取消/超时关闭 -> 释放库存
+    cancel_ops = [o for o in by_domain["order"] if any(k in o["name"].lower() for k in ["cancel", "close", "timeout"])]
+    release_ops = [o for o in ops if any(k in o["name"].lower() for k in ["release", "unlock", "unfreeze"])]
+
+    step_list = []
+    c1 = pick_one(cancel_ops)
+    c2 = pick_one(release_ops)
+    if c1:
+        step_list.append(("cancel_and_release", c1, "取消/超时关闭订单"))
+    if c2:
+        step_list.append(("cancel_and_release", c2, "释放库存/解锁库存"))
+    if len(step_list) >= 2:
+        flows.append(_format_flow("cancel_and_release", "cancel_and_release", "mixed", step_list))'''
+
+    # 支付失败/退款 -> 回补库存(如果仓库里有restore/revert类操作就能拼出来)
+    refund_ops = [o for o in by_domain["order"] if any(k in o["name"].lower() for k in ["refund", "reverse"])]
+    restore_ops = [o for o in ops if any(k in o["name"].lower() for k in ["restore", "rollback", "revert", "increase"])]
+
+    step_list = []
+    r1 = pick_one(refund_ops)
+    r2 = pick_one(restore_ops)
+    if r1:
+        step_list.append(("refund_and_restore", r1, "退款/逆向流程触发"))
+    if r2:
+        step_list.append(("refund_and_restore", r2, "回补库存/回滚扣减"))
+    if len(step_list) >= 2:
+        flows.append(_format_flow("refund_and_restore", "refund_and_restore", "mixed", step_list))
 
     # cancel_and_release
     step_list = []
@@ -311,30 +481,22 @@ def main() -> None:
             entity_domains[cn][domain] += 1   # 这个实体主要属于哪个业务域？这是自动领域归属的关键统计信号。
             entity_mentions[cn][row.file_path] += 1  # 这个实体在某个具体文件中被提及了多少次， 找“实体的核心实现文件”，生成解释：“Order 实体主要在 XXX 文件中定义和使用”
 
-        
+        # 操作
+        for mn in method_names:
+            # 过滤model/mbg中的条件构造器与getter/setter噪声
+            if boundary == "model":
+                if re.match(r"^(get|set|and|or)[A-Z_]", mn):
+                    continue
 
-        # 操作 -- 从代码中识别“业务操作（operation）”，并为每个操作构建一个“可解释的关系图”：它出现在哪些代码证据中、主要属于哪个业务域、以及“为什么认为它是订单/库存相关操作”。
-        for mn in method_names:    # 后面生成“为什么认为这是库存操作”类QA非常好用
             if not is_operation_name(mn):
                 continue
             op_evs[mn].add(row.chunk_id)
             op_domains[mn][domain] += 1
             # signals:命中哪些关键词
-            lt = norm_text(row.content)   # 构建“为什么”的证据
-            for k in ORDER_KWS + STOCK_KWS:  # 遍历订单 / 库存关键词表， 
-                '''这些关键词通常是:
-                    ORDER_KWS: order, submit, cancel, pay …
-                    STOCK_KWS: stock, inventory, sku, lock, deduct …'''
+            lt = norm_text(row.content)
+            for k in ORDER_KWS + STOCK_KWS:
                 if k in lt:
-                    op_signals[mn][k] += 1  # “我们是因为在这段代码里看到了哪些词，才认为 mn 是订单/库存相关操作的”
-
-
-    # 区别实体和操作，分别生成结构化统计信息。
-    # 理由：实体（entity）回答的是“这是什么东西，在哪儿”
-    # 操作（operation）回答的是“发生了什么，为什么”
-    # 所以：
-    # 实体需要的是「位置/承载」信息 → mentions
-    # 操作需要的是「语义/理由」信息 → signals
+                    op_signals[mn][k] += 1
 
     def finalize_items(
         evs: Dict[str, Set[str]],
@@ -342,37 +504,6 @@ def main() -> None:
         mentions: Dict[str, Counter],
         item_type: str
     ) -> List[Dict[str, Any]]:
-        '''
-        Docstring for finalize_items
-        把某一类对象（实体或操作）的统计信息，统一整理成结构化、可排序、可解释的最终结果列表。
-        是“出报告 / 出训练数据前的最后整理函数”。
-        :param evs: item → 出现过的代码证据chunk集合
-        :param domains: item → 不同domain的出现次数
-        :param mentions: item → 在哪些文件中被提及（仅实体用）
-        :param item_type: "entity" 或 "operation"
-        :return: item = {
-                            "name": name, #要么是一个“领域实体的类名”，要么是一个“业务操作的方法名”
-                            "domain": dom,
-                            "confidence": round(conf, 3),
-                            "evidence_chunks": sorted(list(evset)),
-                        }
-                        例子：
-                        {
-                            "name": "Stock",
-                            "domain": "inventory",
-                            "confidence": 0.83,
-                            "evidence_chunks": [
-                                "chunk_0123",
-                                "chunk_0456",
-                                "chunk_0789"
-                            ],
-                            "mentions": [
-                                "inventory/Stock.java",
-                                "inventory/StockServiceImpl.java",
-                                "inventory/StockMapper.java"
-                            ]
-                            }
-        '''
         items = []
         for name, evset in evs.items():
             dom_cnt = domains[name]
@@ -390,48 +521,26 @@ def main() -> None:
                 "evidence_chunks": sorted(list(evset)),
             }
             if item_type == "entity":
-                # mentions:最常出现的文件top5, 实体往往有“核心定义文件”，回答：“Order 实体主要在哪些文件中出现？”, “它的实现重心在哪？”
                 top_files = [fp for fp, _ in mentions[name].most_common(5)]
                 item["mentions"] = top_files
             items.append(item)
 
-        # 按confidence+证据数排序
         items.sort(key=lambda x: (x["confidence"], len(x["evidence_chunks"]), x["name"]), reverse=True)
         return items
 
-
     entities = finalize_items(entity_evs, entity_domains, entity_mentions, "entity")
 
-    # 操作items单独组装signals
-    '''{
-            "name": "reduceStock",
-            "domain": "inventory",
-            "confidence": 0.92,
-            "evidence_chunks": [
-                "chunk_0123",
-                "chunk_0456"
-            ],
-            "signals": [
-                "stock",
-                "inventory",
-                "sku",
-                "lock"
-            ]
-            }
-            
-            sigs是关键词
-            '''
     operations = []
     for name, evset in op_evs.items():
-        dom_cnt = op_domains[name]  # 计算该操作的领域归属
+        dom_cnt = op_domains[name]
         total = sum(dom_cnt.values()) if dom_cnt else 0
         if total == 0:
             dom = "other"
             conf = 0.0
         else:
-            dom, domv = dom_cnt.most_common(1)[0]  # 有统计信息 → 选票最多的 domain
+            dom, domv = dom_cnt.most_common(1)[0]
             conf = domv / total
-        sigs = [k for k, _ in op_signals[name].most_common(8)]  # 取出这个操作在代码中最常“命中”的前 8 个业务关键词
+        sigs = [k for k, _ in op_signals[name].most_common(8)]
 
         operations.append({
             "name": name,
@@ -460,7 +569,6 @@ def main() -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # 同时生成一个sample
     sample_path = ROOT / "data/samples/domain_map_sample.json"
     sample = dict(out)
     sample["entities"] = out["entities"][:30]
