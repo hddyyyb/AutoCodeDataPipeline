@@ -5,8 +5,7 @@ This document explains the design decisions of AutoCodeDataPipeline and how they
 
 ## Design Goals
 
-The goal of AutoCodeDataPipeline is to automatically generate
-auditable and high-quality training data from a local code repository.
+The goal of AutoCodeDataPipeline is to automatically generate auditable and high-quality training data from a local code repository.
 
 Key objectives:
 - Every generated sample is grounded in original source code
@@ -30,8 +29,7 @@ The system is organized as a staged pipeline:
 
 ## Chunk-Level Grounding
 
-All downstream artifacts reference a stable `chunk_id`
-generated during repository indexing.
+All downstream artifacts reference a stable `chunk_id` generated during repository indexing.
 
 Each chunk records:
 - File path
@@ -44,8 +42,7 @@ This provides precise and stable traceability across dataset iterations.
 
 ## Heuristic but Auditable Repository Understanding
 
-Instead of constructing a full call graph,
-the system applies heuristics to infer:
+Instead of constructing a full call graph, the system applies heuristics to infer:
 - Architectural boundaries
 - Domain entities and operations
 - Candidate business flow skeletons
@@ -72,8 +69,6 @@ These traces are designed for auditability and compliance.
 
 ## Training–Inference Alignment
 
-The same constraints applied during dataset construction
-are enforced again at inference time.
+The same constraints applied during dataset construction are enforced again at inference time.
 
-Outputs that violate format, evidence, or reasoning rules
-are rejected or automatically repaired using trusted evidence.
+Outputs that violate format, evidence, or reasoning rules are rejected or automatically repaired using trusted evidence.
