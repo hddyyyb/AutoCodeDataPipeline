@@ -32,7 +32,7 @@ from collections import defaultdict
 
 ROOT = Path(__file__).resolve().parents[1]
 
-
+# 先设定一些规则
 RULE_PATTERNS = [
     ("order_status_guard", re.compile(r"\b(status|Status|orderStatus|OrderStatus)\b.*(==|!=|equals)\b", re.I), ["order", "status"]),
     ("state_transition", re.compile(r"(change|update).*(status|Status)|set.*Status", re.I), ["order", "status"]),
@@ -78,10 +78,12 @@ def has_cjk(s: str) -> bool:
     return bool(s and _CJK_RE.search(s))
 
 
+# 生成稳定ID
 def sha1_text(s: str) -> str:
     return hashlib.sha1(s.encode("utf-8", errors="ignore")).hexdigest()
 
 
+# 基础IO
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
     rows = []
     with path.open("r", encoding="utf-8") as f:
@@ -100,10 +102,11 @@ def write_jsonl(path: Path, rows: Iterable[Dict[str, Any]]) -> None:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
+# 用于拿candidate_flows
 def load_domain_map(path: Path) -> Dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
-
+#
 def infer_domain_from_tags(tags: List[str]) -> str:
     t = set(tags)
     if "stock" in t:
@@ -113,6 +116,7 @@ def infer_domain_from_tags(tags: List[str]) -> str:
     return "mixed"
 
 
+# bilingual辅助:规则title/description中英模板+
 TITLE_EN_MAP = {
     "order_status_guard": "Order status guard and validation",
     "state_transition": "Order status transition update",
@@ -126,7 +130,8 @@ TITLE_EN_MAP = {
     "timeout_close": "Timeout close and cancellation",
 }
 
-# 业务步骤中文标签 -> 英文(用于flow step对齐;不覆盖name_en(方法名拆词))
+# “业务语义中文标签→英文”的映射表，解决“中文业务步与英文对不上”的问题：
+# 英文不再乱翻，而是从固定字典里取对齐短语。
 BIZ_STEP_ZH_TO_EN = {
     "创建订单/提交订单": "Create/submit order",
     "锁定库存/预占库存": "Lock/reserve stock",
@@ -137,6 +142,8 @@ BIZ_STEP_ZH_TO_EN = {
     "处理支付回调并驱动状态流转": "Handle payment callback and drive status transition",
 }
 
+
+# bilingual辅助:flow步骤中英文对齐
 def biz_step_en(zh: str) -> str:
     zh = (zh or "").strip()
     if not zh:
@@ -157,6 +164,8 @@ def biz_step_en(zh: str) -> str:
     return ""
 
 
+
+# 当一个chunk命中多个types时，把多个类型的标题片段拼成" / "分隔的title/title_en。
 def title_from_types_zh(types: List[str]) -> str:
     mapping = {
         "order_status_guard": "订单状态约束校验",
@@ -177,6 +186,9 @@ def title_from_types_en(types: List[str]) -> str:
     parts = [TITLE_EN_MAP.get(t, t) for t in types]
     return " / ".join(parts)
 
+
+# 根据命中的types拼一个解释性description/description_en(模板化、可控，不依赖外部翻译)
+# 用途：让rule不仅有“类别名”，还有一段“为什么这像规则”的可读描述，便于训练时提问/回答更自然。
 def desc_from_types_zh(types: List[str], tags: List[str]) -> str:
     segs = []
     if "order_status_guard" in types or "state_transition" in types:
@@ -229,6 +241,7 @@ def split_camel(s: str) -> str:
     toks = [t.lower() for t in toks if t]
     return " ".join(toks).strip()
 
+# flow生成可读的name_en
 def flow_name_en_from_zh_or_ops(flow: Dict[str, Any]) -> str:
     name = flow.get("name") or ""
     if name and not has_cjk(name):
@@ -247,6 +260,7 @@ def flow_name_en_from_zh_or_ops(flow: Dict[str, Any]) -> str:
     return f"{dom.capitalize()} flow({fid[:8]})" if fid else f"{dom.capitalize()} flow"
 
 
+# domain_map里的candidate_flows整理成flows.jsonl
 def build_flow_records(domain_map: Dict[str, Any]) -> List[Dict[str, Any]]:
     flows = []
     for f in domain_map.get("candidate_flows", []):
@@ -295,17 +309,19 @@ def build_flow_records(domain_map: Dict[str, Any]) -> List[Dict[str, Any]]:
     return flows
 
 
+# repo_index扫描chunk级“规则候选”
 def collect_rule_candidates(index_rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     candidates = []
-    for r in index_rows:
-        content = r.get("content", "")
+    
+    for r in index_rows:                        # 对repo_index里的每个chunk做：
+        content = r.get("content", "")          # 1)取content,file_path；
         fp = r.get("file_path", "")
         if not content:
             continue
 
         tags_hit: List[str] = []
         types_hit: List[str] = []
-        for rule_type, pat, tags in RULE_PATTERNS:
+        for rule_type, pat, tags in RULE_PATTERNS:  # 2)遍历RULE_PATTERNS，pat.search(content)命中就记录types_hit与tags_hit；
             if pat.search(content):
                 types_hit.append(rule_type)
                 tags_hit.extend(tags)
@@ -321,9 +337,10 @@ def collect_rule_candidates(index_rows: List[Dict[str, Any]]) -> List[Dict[str, 
             "types": sorted(set(types_hit)),
             "tags": sorted(set(tags_hit)),
         })
-    return candidates
+    return candidates       
 
 
+# 很多chunk候选合并成较少的“规则rule”-- “同文件+同类规则信号”近似合并。
 def aggregate_rules(cands: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     buckets: Dict[Tuple[str, str], Dict[str, Any]] = {}
 
@@ -370,17 +387,21 @@ def aggregate_rules(cands: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             }
         })
 
+    # 最终把set转list，evidence_chunks排序，meta里保留evidence_files_top(最多10个)
+    # rules按(len(evidence_chunks),title)降序排序：证据越多的规则越靠前(更“代表性/稳定”)
+
     rules.sort(key=lambda x: (len(x["evidence_chunks"]), x["title"]), reverse=True)
     return rules
 
-
+# 给flow附加related_rules, 让后续生成QA更容易问出“流程中涉及哪些规则/约束”。
 def build_flow_to_rule_links(flows: List[Dict[str, Any]], rules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     rule_by_chunk = defaultdict(list)
     for r in rules:
         for cid in r["evidence_chunks"]:
-            rule_by_chunk[cid].append(r["rule_id"])
+            rule_by_chunk[cid].append(r["rule_id"])  
+            # 先建rule_by_chunk：chunk_id→[rule_id...]，只看rules里的evidence_chunks。
 
-    for f in flows:
+    for f in flows:  # 如果这个chunk在rule_by_chunk里→把对应rule_id加入rel集合
         rel: Set[str] = set()
         for s in f.get("steps", []):
             cid = s.get("evidence_chunk", "")
@@ -391,7 +412,7 @@ def build_flow_to_rule_links(flows: List[Dict[str, Any]], rules: List[Dict[str, 
             candidates = [r for r in rules if r["domain"] in (dom, "mixed")]
             candidates = sorted(candidates, key=lambda x: len(x["evidence_chunks"]), reverse=True)[:5]
             rel.update([r["rule_id"] for r in candidates])
-        f["related_rules"] = sorted(list(rel))
+        f["related_rules"] = sorted(list(rel))  # 4)写回flow["related_rules"]=sorted(list(rel))
     return flows
 
 

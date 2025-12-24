@@ -3,13 +3,13 @@
 ## 数据集概览
 - repo_index_chunks:3408
 - QA样本数(去重前/后):57/57removed=0
-- Design样本数(去重前/后):46/46removed=0
-- FinalFinetune(去重后)split:train=82,dev=10,test=11
+- Design样本数(去重前/后):53/53removed=0
+- FinalFinetune(去重后)split:train=88,dev=11,test=11
 
 ## QA样本统计
 - count:57
 - evidence_snippets_avg:1.035
-- code_chars_avg:1297.07
+- code_chars_avg:1281.298
 - snippet_coverage_rate:1.0
 - trace_steps_avg:3.0
 
@@ -26,22 +26,22 @@
 - unknown:57
 
 ## Design样本统计
-- count:46
+- count:53
 - evidence_snippets_avg:3.0
-- code_chars_avg:2457.391
+- code_chars_avg:2536.868
 - snippet_coverage_rate:1.0
 - trace_steps_avg:4.0
 
 ### language分布
-- zh:46
+- zh:53
 ### domain分布
 - mixed:9
-- order:25
-- stock:12
+- order:26
+- stock:18
 ### difficulty分布
 - easy:3
 - hard:6
-- medium:37
+- medium:44
 
 ## 质量保证机制
 - schema校验:每条样本必须包含可训练text或核心字段(QA:question/answer,Design:requirement/design_output)
