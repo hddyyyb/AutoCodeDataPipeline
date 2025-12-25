@@ -430,6 +430,20 @@ _FLOW_Q_EN = [
 ]
 
 
+_FLOW_RULE_Q_ZH = [
+    "流程“{flow_name}”涉及哪些业务规则/约束?请列出规则并说明它们在代码中的证据位置(强关联/弱关联)。",
+    "结合流程“{flow_name}”的执行步骤,梳理其关联的业务规则清单,并标注每条规则的证据代码chunk。",
+    "在“{flow_name}”流程中,哪些规则用于约束状态/库存/幂等/失败分支?请用证据代码说明。",
+]
+
+_FLOW_RULE_Q_EN = [
+    "What business rules/constraints are involved in the flow '{flow_name}'?List the rules and point to evidence chunks(strong/weak links).",
+    "Based on the steps of '{flow_name}', summarize the related rules and annotate evidence code chunks for each rule.",
+    "In the flow '{flow_name}', which rules constrain state/stock/idempotency/failure branches?Explain with evidence code.",
+]
+
+
+
 def choose_rule_question(lang: str, focus: str, title: str, file_path: str) -> str:
     pool = _RULE_Q_ZH if lang == "zh" else _RULE_Q_EN
     arr = pool.get(focus) or pool["general"]
@@ -440,9 +454,235 @@ def choose_flow_question(lang: str, flow_name: str) -> str:
     arr = _FLOW_Q_ZH if lang == "zh" else _FLOW_Q_EN
     return random.choice(arr).format(flow_name=flow_name)
 
+
+def choose_flow_rule_question(lang: str, flow_name: str) -> str:
+    arr = _FLOW_RULE_Q_ZH if lang == "zh" else _FLOW_RULE_Q_EN
+    return random.choice(arr).format(flow_name=flow_name)
+
+
+def _rule_title_for_lang(rule: Dict[str, Any], ev: Dict[str, Any], key_lines: List[str], lang: str, strict_lv: int) -> str:
+    """给flow*rule QA用：为rule挑一个合适的title(zh/en)，必要时兜底为纯英文label。"""
+    rid = rule.get("rule_id") or rule.get("id") or ""
+    title_zh = (rule.get("title") or rid or "业务规则").strip()
+    title_en = (rule.get("title_en") or "").strip()
+
+    if lang != "en":
+        return title_zh
+
+    # EN:尽量用title_en，否则用raw(如果本身不含中文)，否则infer兜底
+    if title_en and (not has_cjk(title_en)):
+        return title_en
+    if title_zh and (not has_cjk(title_zh)):
+        return title_zh
+
+    infer_title, _infer_desc = infer_en_topic_from_evidence(ev, key_lines)
+    fb = infer_title or (f"Rule {rid}" if rid else "Rule")
+    # strict=2时如果还含中文，直接给纯英文label
+    if strict_lv >= 2 and has_cjk(fb):
+        return f"Rule {rid}" if rid else "Rule"
+    return fb
+
+
+def generate_flow_rule_qa(
+    flow: Dict[str, Any],
+    rules_by_id: Dict[str, Dict[str, Any]],
+    index_map: Dict[str, Dict[str, Any]],
+    lang: str,
+    code_max_chars: int,
+    flow_max_evs: int,
+    rule_max_evs: int,
+    ex_re: re.Pattern,
+) -> Dict[str, Any]:
+    """
+    新增: 显式flow*rule QA
+    - 消费flow.related_rules
+    - 输出qa_type=flow_rule
+    - 答案里给: 流程步骤+代码位置, 以及关联规则清单(强/弱关联)+证据定位
+    """
+    related_rule_ids = flow.get("related_rules") or []
+    if not related_rule_ids:
+        return {}
+
+    # 1) flow侧证据
+    flow_evs: List[Dict[str, Any]] = []
+    flow_step_chunk_ids: List[str] = []
+    for s in flow.get("steps", []) or []:
+        cid = s.get("evidence_chunk")
+        if cid:
+            flow_step_chunk_ids.append(cid)
+        if cid and cid in index_map:
+            ev = build_evidence(cid, index_map, code_max_chars)
+            if is_excluded_file(ev["file_path"], ex_re):
+                continue
+            flow_evs.append(ev)
+        if len(flow_evs) >= flow_max_evs:
+            break
+    if not flow_evs:
+        return {}
+
+    # flow chunk集合用于强/弱关联
+    flow_chunk_set = set([c for c in (flow.get("evidence_chunks") or flow_step_chunk_ids) if c])
+
+    flow_id = flow.get("flow_id") or flow.get("id") or ""
+    domain = flow.get("domain") or "mixed"
+
+    strict_lv = get_en_strict_level()
+    if lang == "en":
+        flow_name_raw = (flow.get("name") or "").strip()
+        flow_name_en = (flow.get("name_en") or "").strip()
+        fb = f"Flow {flow_id}" if flow_id else "Business flow"
+        flow_name = flow_name_raw if strict_lv == 0 else en_pick(flow_name_raw, flow_name_en, fb, strict_lv)
+        if strict_lv >= 2 and (not flow_name):
+            return {}
+    else:
+        flow_name = (flow.get("name") or "").strip() or (flow_id or "业务流程")
+
+    # 2) rule侧证据
+    rule_items = []
+    rule_evs: List[Dict[str, Any]] = []
+
+    for rid in related_rule_ids:
+        r = rules_by_id.get(rid)
+        if not r:
+            continue
+        r_chunks = r.get("evidence_chunks") or []
+        if not r_chunks:
+            continue
+
+        # 只取首个chunk做rule证据(聚焦)
+        rcid = r_chunks[0]
+        if rcid not in index_map:
+            continue
+
+        ev = build_evidence(rcid, index_map, code_max_chars)
+        if is_excluded_file(ev["file_path"], ex_re):
+            continue
+
+        key_lines_r = extract_key_lines(ev.get("content") or "", max_lines=10)
+        title = _rule_title_for_lang(r, ev, key_lines_r, lang, strict_lv)
+
+        # 强/弱关联：规则证据chunk是否落在flow证据集合中
+        link = "strong" if (rcid in flow_chunk_set or any(c in flow_chunk_set for c in r_chunks[:3])) else "weak"
+
+        rule_items.append({
+            "rule_id": rid,
+            "title": title,
+            "link": link,
+            "evidence_chunk": rcid,
+            "file_path": ev["file_path"],
+            "start_line": ev["start_line"],
+            "end_line": ev["end_line"],
+        })
+        rule_evs.append(ev)
+
+        if len(rule_evs) >= rule_max_evs:
+            break
+
+    if not rule_items:
+        return {}
+
+    # 3) 问题
+    q = choose_flow_rule_question(lang, flow_name=flow_name)
+
+    # 4) focus/boundary沿用flow首证据推断
+    key_lines = extract_key_lines(flow_evs[0].get("content") or "", max_lines=10)
+    focus = infer_focus_from_key_lines(key_lines)
+    boundary = infer_boundary(flow_evs[0]["file_path"])
+
+    # 5) core：流程+规则清单
+    flow_part = build_flow_answer(flow, flow_evs, lang)
+
+    if lang == "zh":
+        rules_lines = []
+        for it in rule_items:
+            tag = "强关联" if it["link"] == "strong" else "弱关联"
+            rules_lines.append(
+                f"- {it['title']}(rule_id={it['rule_id']},{tag})->{it['file_path']}:L{it['start_line']}-{it['end_line']}(chunk_id={it['evidence_chunk']})"
+            )
+        rules_part = "关联规则清单(含强/弱关联标注):\n" + "\n".join(rules_lines)
+        core = f"关注点:{focus_display(lang, focus)}\n\n{flow_part}\n\n{rules_part}"
+    else:
+        rules_lines = []
+        for it in rule_items:
+            tag = "strong" if it["link"] == "strong" else "weak"
+            rules_lines.append(
+                f"- {it['title']}(rule_id={it['rule_id']},{tag})->{it['file_path']}:L{it['start_line']}-{it['end_line']}(chunk_id={it['evidence_chunk']})"
+            )
+        rules_part = "Related rules(with strong/weak links):\n" + "\n".join(rules_lines)
+        core = f"Focus:{focus_display(lang, focus)}\n\n{flow_part}\n\n{rules_part}"
+
+    trace_steps = build_trace(lang, focus, flow_name)
+
+    # wrap_answer只展示前3个代码块，因此把flow+rule证据拼到一起即可
+    evidences_all = flow_evs + rule_evs
+    a = wrap_answer(core, evidences_all, trace_steps, lang)
+    text = f"### Instruction\n{q}\n\n### Response\n{a}\n"
+
+    meta_v2 = {
+        "task_type": "qa",
+        "language": lang,
+        "domain": domain,
+        "qa_type": "flow_rule",
+        "focus": focus,
+        "boundary": boundary,
+        "flow_id": flow_id,
+        "related_rule_ids": [x["rule_id"] for x in rule_items],
+        "rule_links": rule_items,  # 强/弱关联+定位信息
+        "evidence": [{
+            "chunk_id": e["chunk_id"],
+            "file_path": e["file_path"],
+            "start_line": e["start_line"],
+            "end_line": e["end_line"],
+        } for e in evidences_all],
+        "evidence_snippets": [{
+            "chunk_id": e["chunk_id"],
+            "file_path": e["file_path"],
+            "start_line": e["start_line"],
+            "end_line": e["end_line"],
+            "code_lang": e.get("code_lang"),
+            "code": e.get("code"),
+        } for e in evidences_all],
+        "trace_digest": trace_steps,
+        "generator": "step04_v6_diversity_quota",
+        "source": "AutoCodeDataPipeline",
+    }
+
+    return {
+        "sample_id": make_id("qa", f"flow_rule|{flow_id}|{lang}|{focus}|{sha1_text(q)[:6]}"),
+        "task_type": "qa",
+        "language": lang,
+        "question": q,
+        "answer": a,
+        "evidence": [{
+            "chunk_id": e["chunk_id"],
+            "file_path": e["file_path"],
+            "start_line": e["start_line"],
+            "end_line": e["end_line"],
+            "content": e.get("content") or "",
+        } for e in evidences_all],
+        "trace": {
+            "type": "flow_rule_based",
+            "flow_id": flow_id,
+            "rule_ids": [x["rule_id"] for x in rule_items],
+            "reasoning_steps": trace_steps,
+        },
+        "meta": {
+            "domain": domain,
+            "qa_type": "flow_rule",
+            "focus": focus,
+            "boundary": boundary,
+            "generator": "step04_v6_diversity_quota",
+            "source": "AutoCodeDataPipeline",
+        },
+        "text": text,
+        "meta_v2": meta_v2,
+    }
 # -----------------------------
 # 答案构造
 # -----------------------------
+
+
+
 def build_rule_conclusion(lang: str, title: str, focus: str, key_lines: List[str]) -> str:
     '''核心是：按focus输出不同的“结论句+检查点”。
     不逐行解释代码，而是给训练一个更像“架构/规则总结”的答案骨架'''
@@ -979,6 +1219,16 @@ def main():
     rules = read_jsonl(ROOT / "data/extracted/rules.jsonl")
     flows = read_jsonl(ROOT / "data/extracted/flows.jsonl")
     index_map = {r["chunk_id"]: r for r in index_rows}
+    # =============================
+    # ===== [FLOW*RULE ADD] =====
+    # rules_by_id: 通过rule_id/id快速取rule
+    # =============================
+    rules_by_id = {}
+    for r in rules:
+        rid = r.get("rule_id") or r.get("id")
+        if rid:
+            rules_by_id[rid] = r
+
 
     lang_mode = resolve_language(default_lang="zh")
     langs = ["zh", "en"] if lang_mode == "bilingual" else [lang_mode]
@@ -987,6 +1237,13 @@ def main():
     flow_max_evs = int(os.environ.get("QA_FLOW_MAX_EVS", "3"))
     code_max_chars = int(os.environ.get("QA_CODE_MAX_CHARS", "2200"))
     rule_per_id_cap = int(os.environ.get("QA_RULE_PER_ID_CAP", "3"))
+    
+    # =============================
+    # ===== [FLOW*RULE ADD] =====
+    # 控制是否生成flow*rule QA，以及每条flow最多挂多少条rule证据
+    # =============================
+    flow_rule_enable = os.environ.get("QA_FLOW_RULE_ENABLE", "1").strip() not in ("0", "false", "False")
+    flow_rule_max_rules = int(os.environ.get("QA_FLOW_RULE_MAX_RULES", "4"))
 
     # 代表性控制参数
     train_target = int(os.environ.get("QA_TRAIN_N", "0"))  # 0表示用全部样本按比例切
@@ -1046,7 +1303,7 @@ def main():
             all_samples.append(s)
 
         # flows:全量生成,但去重
-        for f in flows:
+        '''for f in flows:
             s = generate_flow_qa(f, index_map, lang, code_max_chars, flow_max_evs, ex_re)
             if not s:
                 continue
@@ -1054,7 +1311,35 @@ def main():
             if sig in seen_q_sig:
                 continue
             seen_q_sig.add(sig)
-            all_samples.append(s)
+            all_samples.append(s)'''
+                # flows:全量生成,但去重
+        for f in flows:
+            # 1) 原有: flow QA
+            s = generate_flow_qa(f, index_map, lang, code_max_chars, flow_max_evs, ex_re)
+            if s:
+                sig = (lang, s["question"], tuple([e.get("chunk_id") for e in (s.get("evidence") or [])]))
+                if sig not in seen_q_sig:
+                    seen_q_sig.add(sig)
+                    all_samples.append(s)
+
+            # 2) 新增: flow*rule QA
+            if flow_rule_enable:
+                sr = generate_flow_rule_qa(
+                    f,
+                    rules_by_id=rules_by_id,
+                    index_map=index_map,
+                    lang=lang,
+                    code_max_chars=code_max_chars,
+                    flow_max_evs=flow_max_evs,
+                    rule_max_evs=flow_rule_max_rules,
+                    ex_re=ex_re,
+                )
+                if sr:
+                    sig = (lang, sr["question"], tuple([e.get("chunk_id") for e in (sr.get("evidence") or [])]))
+                    if sig not in seen_q_sig:
+                        seen_q_sig.add(sig)
+                        all_samples.append(sr)
+
 
     random.shuffle(all_samples)
 

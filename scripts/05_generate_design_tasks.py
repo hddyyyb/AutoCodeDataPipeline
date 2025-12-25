@@ -8,6 +8,32 @@ AutoCodeDataPipeline Step05(v8)
 保留目标:
 - 每条样本带evidence_snippets+trace
 - bilingual时分别生成zh/en两套
+
+[作业题目回顾：
+任务描述:
+您的任务是设计一套系统框架，自动化生成和处理训练数据，以支持基于本地代码仓的小型项目的专有模型训练。您需要关注以下两个场景:
+1. 场景 1:根据本地代码仓的业务流程和规则，自动化生成问答对。对于每个问答，需提供原文的代码段及推理过程。
+2. 场景 2:为给定的需求生成一个基于本地代码仓架构的设计方案，并提供相应的解释和推理 trace
+]
+输入：  代码仓的索引(repo_index.jsonl)
+        域模型/领域地图(domain_map.json)
+        Step03提取出的规则(rules.jsonl)和流程(flows.jsonl)
+        一份人工维护的“需求模板”YAML(configs/design_requirements.yaml)
+输出：
+    一堆“需求→设计方案”的训练样本(design_train/dev/test.jsonl)，里面每条都带：
+        § requirement-需求描述
+        § design_output-结构化设计结果：组件、接口、数据表、风险点等
+        § evidence_snippets-对应的代码片段
+        § trace-简单的推理步骤
+        § text-已经拼好指令+回答的SFT文本
+        § meta_v2-元数据,用于审计和quota采样
+核心生成逻辑：
+1)收集需求(all_reqs)=yaml模板需求+自动扩展需求(auto_reqs)
+2)对每条需求，按domain挑一批参考chunk(来自rules+flows)，抽取证据(evidence_snippets)
+3)从证据里抓一些类名/方法名/角色(role)作为命名线索(name_hints)
+4)随机挑策略组合(strategies)，把策略映射成组件/接口/数据表/流程/风险等设计输出
+5)生成trace+训练text(Instruction/Response)
+6)按domain配额+strategy配额+file/chunk限流做代表性抽样切分(train/dev/test)
 """
 
 import json
@@ -27,9 +53,9 @@ except Exception:
 
 ROOT = Path(__file__).resolve().parents[1]
 
-_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
-_CLASS_RE = re.compile(r"\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\b")
-_METHOD_RE = re.compile(r"\b(public|private|protected)\s+[\w<>\[\]]+\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")  # _CJK_RE：用来检测字符串里有没有中文字符（CJK），后面严格英文过滤会用到。
+_CLASS_RE = re.compile(r"\bclass\s+([A-Za-z_][A-Za-z0-9_]*)\b")  # 匹配class XXX，从代码里抽类名。
+_METHOD_RE = re.compile(r"\b(public|private|protected)\s+[\w<>\[\]]+\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")  # 匹配Java的方法定义，从代码中抽方法名。
 
 _ROLE_HINTS = [
     (re.compile(r"/controller/|Controller\.java$", re.IGNORECASE), "controller"),
@@ -37,7 +63,7 @@ _ROLE_HINTS = [
     (re.compile(r"/mapper/|Mapper\.java$", re.IGNORECASE), "mapper"),
     (re.compile(r"/dao/|Dao\.java$", re.IGNORECASE), "mapper"),
     (re.compile(r"/config/|Configuration\.java$|\.yml$|\.yaml$|\.properties$", re.IGNORECASE), "config"),
-]
+]  # 根据文件路径/后缀推断“角色”：controller/service/mapper/config等
 
 
 def has_cjk(s: str) -> bool:
@@ -52,7 +78,7 @@ def make_id(prefix: str, seed: str) -> str:
     return prefix + "_" + sha1_text(seed)[:10]
 
 
-def load_templates():
+def load_templates():  # 读configs/nlg_templates.json，里面可能有一些覆盖性文案模板
     p = ROOT / "configs/nlg_templates.json"
     return json.loads(p.read_text(encoding="utf-8"))
 
@@ -82,7 +108,7 @@ def load_yaml(path: Path) -> Dict[str, Any]:
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
-def normalize_lang(lang: str) -> str:
+def normalize_lang(lang: str) -> str:  # 和Step04类似：优先环境变量LANG，其次configs/runtime.yaml里的language.mode，否则默认zh
     if not lang:
         return "zh"
     l = lang.strip().lower()
@@ -124,6 +150,8 @@ def get_strict_en_level() -> int:
     return 0 if lv < 0 else 2 if lv > 2 else lv
 
 
+
+
 def detect_code_lang(file_path: str) -> str:
     fp = (file_path or "").lower()
     if fp.endswith(".java"):
@@ -144,8 +172,7 @@ def detect_code_lang(file_path: str) -> str:
         return "python"
     return ""
 
-
-def trim_code(code: str, max_chars: int) -> str:
+def trim_code(code: str, max_chars: int) -> str:  # 截断代码，避免样本过长。
     if not code:
         return ""
     if len(code) <= max_chars:
@@ -153,12 +180,22 @@ def trim_code(code: str, max_chars: int) -> str:
     return code[: max_chars - 20] + "\n/* ... truncated ... */\n"
 
 
+# -----------------------------
+# 证据构造与命名线索提取
+# -----------------------------
 def build_evidence(
     chunk_ids: List[str],
     index_map: Dict[str, Dict[str, Any]],
     k: int,
     code_max_chars: int
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    '''
+    :param: chunk_id列表 + 全量index_map(从repo_index读出来)。
+    :return:
+	    1. refs: 精简的证据信息-chunk_id+文件+行号
+	    2. snippets: 带截断代码的片段- 多了content/code_lang/code等
+        (按chunk_ids顺序从index_map里查,取前k个存在的chunk组成证据列表)
+    '''
     refs = []
     snippets = []
     for cid in chunk_ids:
@@ -184,6 +221,7 @@ def build_evidence(
     return refs, snippets
 
 
+# 用_ROLE_HINTS按路径推断角色(controller/service/mapper/config/other)。
 def infer_role_from_path(fp: str) -> str:
     p = (fp or "").replace("\\", "/")
     for rx, role in _ROLE_HINTS:
@@ -193,6 +231,14 @@ def infer_role_from_path(fp: str) -> str:
 
 
 def extract_names_from_snippets(evidence_snippets: List[Dict[str, Any]]) -> Dict[str, Any]:
+    '''
+    从证据代码里抽：
+	classes: 用class Xxx正则最多6个
+	methods: 用Java方法签名正则最多8个
+	roles/files: 从前3个snippet里抽角色和文件
+    用途：让设计输出更“贴仓库”，比如“复用/改造类:OrderService”“关注入口方法:cancelOrder”等，这会显著提升“像真设计”的观感。
+    '''
+
     classes: List[str] = []
     methods: List[str] = []
     roles: List[str] = []
@@ -223,6 +269,13 @@ def extract_names_from_snippets(evidence_snippets: List[Dict[str, Any]]) -> Dict
 
 
 def summarize_repo_context(domain_map: Dict[str, Any], domain: str) -> Dict[str, Any]:
+    '''
+        从domain_map里选domain或mixed的entities/operations
+        返回: 
+        boundaries_summary: controller/service/mapper chunk数量(理解仓库分层覆盖情况)
+        top_entities/top_operations: 前若干个实体/操作名
+        constraints: 中文约束三条(分层复用、模式复用、关键变更幂等可追溯)
+    '''
     ents = [e for e in domain_map.get("entities", []) if e.get("domain") in (domain, "mixed")]
     ops = [o for o in domain_map.get("operations", []) if o.get("domain") in (domain, "mixed")]
     return {
@@ -241,7 +294,7 @@ def summarize_repo_context(domain_map: Dict[str, Any], domain: str) -> Dict[str,
     }
 
 
-def repo_constraints_en() -> List[str]:
+def repo_constraints_en() -> List[str]:  # 英文版三条固定约束
     return [
         "Follow the existing Controller/Service/Mapper layering.",
         "Prefer reusing existing order/stock service and mapper patterns.",
@@ -250,6 +303,18 @@ def repo_constraints_en() -> List[str]:
 
 
 def pick_reference_chunks(rules: List[Dict[str, Any]], flows: List[Dict[str, Any]], domain: str) -> List[str]:
+    '''
+    如何选参考chunk(grounding来源)
+    pick_reference_chunks(rules, flows, domain)的逻辑是：
+    1.  先从flows里找:f.domain in (domain, "mixed")
+        把每个step的evidence_chunk收集起来
+
+    2.  再从rules里找:r.domain in (domain, "mixed")
+        每条rule取前2个evidence_chunks
+
+    去重, 得到一个chunk_id列表
+    证据池完全由(domain → 匹配的rules/flows)决定，与需求文本内容无关。
+    '''
     chunk_ids = []
     for f in flows:
         if f.get("domain") in (domain, "mixed"):
@@ -282,7 +347,8 @@ def _safe_en_label(domain: str, kind: str, fallback_id: str, zh_text: str) -> st
 
 
 # -----------------------------
-# Strategy library(zh+en)
+# 策略库 - Strategy library(zh+en)
+# “可控多样性来源”，每个策略同时有zh/en描述和落地点points。
 # -----------------------------
 STRATEGIES = [
     {
@@ -332,6 +398,14 @@ _STR_BY_ID = {s["id"]: s for s in STRATEGIES}
 
 
 def pick_strategies(domain: str) -> List[Dict[str, Any]]:
+    '''按domain做偏好
+        stock偏好: ttl_reserve、idempotency_key、optimistic_lock
+        非stock偏好: state_machine、outbox、idempotency_key
+    然后按随机概率挑2~3个策略. 保证:
+        绝不低于2个(while补齐)
+        最多3个
+    用途：让同一需求生成多个不同“设计变体”。
+'''
     prefer = ["ttl_reserve", "idempotency_key", "optimistic_lock"] if domain == "stock" else ["state_machine", "outbox", "idempotency_key"]
     picked = []
     for pid in prefer:
@@ -349,9 +423,21 @@ def pick_strategies(domain: str) -> List[Dict[str, Any]]:
 
 
 # -----------------------------
-# Requirement expansion(bilingual)
+# 需求扩展(自动从flows+rules造需求，bilingual)
 # -----------------------------
 def expand_requirements_from_flows_and_rules(flows: List[Dict[str, Any]], rules: List[Dict[str, Any]], max_n: int) -> List[Dict[str, Any]]:
+    '''
+    自动扩充“场景2(需求→设计方案)”的需求池，即使没手写太多需求，
+    也能从本地代码仓中“长出足够多、覆盖足够广”的设计类训练样本。
+    自动生成两类需求:
+    1)从每条flow生成一个“围绕该流程做增强设计”的需求
+    2)从每条rule生成一个“针对该规则设计统一校验与审计方案”的需求
+    并且为每条需求同时生成:
+	    requirement_zh
+	    requirement_en(纯英文),其中flow/rule的英文名字优先用name_en/title_en,否则用_safe_en_label兜底
+	    context_en:比如Flow:xxx或Rule:xxx给英文instruction增强上下文
+    场景2覆盖率-yaml里需求很少,也能自动扩充训练集规模与覆盖面。
+    '''
     reqs: List[Dict[str, Any]] = []
 
     for f in flows:
@@ -399,7 +485,7 @@ def expand_requirements_from_flows_and_rules(flows: List[Dict[str, Any]], rules:
 
 
 # -----------------------------
-# Design generation(dynamic, zh/en separated)
+# 设计输出生成(核心函数)  (dynamic, zh/en separated)
 # -----------------------------
 def generate_design_output(
     requirement: str,
@@ -409,6 +495,9 @@ def generate_design_output(
     strategies: List[Dict[str, Any]],
     lang: str
 ) -> Dict[str, Any]:
+    '''
+    这是“把需求转成结构化设计”的核心模板生成器
+    '''
     classes = name_hints.get("classes") or []
     methods = name_hints.get("methods") or []
     files = name_hints.get("files") or []
@@ -437,7 +526,7 @@ def generate_design_output(
     data_model: List[str] = []
     risks: List[str] = []
 
-    if domain == "stock":
+    if domain == "stock":  # 根据domain先放一套“领域骨架组件+API+数据模型”：
         if lang == "zh":
             components += [
                 "StockReserveService(新增/扩展):预占/释放/确认入口(幂等)",
@@ -487,7 +576,8 @@ def generate_design_output(
         data_model += [
             "order_audit(id,order_id,from_status,to_status,source,request_id,created_at)",
         ]
-
+    
+    # 再根据策略sid追加组件/表/说明：
     for sid in strat_ids:
         if sid == "outbox":
             if lang == "zh":
@@ -769,18 +859,22 @@ def print_coverage(samples: List[Dict[str, Any]], title: str) -> None:
 
 
 def main():
+    # 1)读templates_nlg、决定langs(zh/en/bilingual)、strict_en
     templates_nlg = load_templates()
     lang_mode = resolve_language(default_lang="zh")
     langs = ["zh", "en"] if lang_mode == "bilingual" else [lang_mode]
     strict_en = get_strict_en_level()
 
+    # 2)读repo_index构建index_map
     index_rows = read_jsonl(ROOT / "data/raw_index/repo_index.jsonl")
     index_map = {r["chunk_id"]: r for r in index_rows}
 
+    # 3)读domain_map、rules、flows
     domain_map = json.loads((ROOT / "data/extracted/domain_map.json").read_text(encoding="utf-8"))
     rules = read_jsonl(ROOT / "data/extracted/rules.jsonl")
     flows = read_jsonl(ROOT / "data/extracted/flows.jsonl")
 
+    # 4)读取环境变量knobs：证据长度、证据条数、是否自动扩展、每需求变体数、切分比例、配额权重等
     code_max_chars = int(os.environ.get("DESIGN_CODE_MAX_CHARS", "2200"))
     evidence_k = int(os.environ.get("DESIGN_EVIDENCE_K", "3"))
     auto_expand = os.environ.get("DESIGN_AUTO_EXPAND", "1").strip() not in ("0", "false", "False")
@@ -809,12 +903,14 @@ def main():
         "optimistic_lock": int(os.environ.get("DESIGN_SQ_OPTLOCK", "20")),
     }
 
+    # 5)读取configs/design_requirements.yaml里的templates(手写需求)
     cfg_path = ROOT / "configs/design_requirements.yaml"
     if not cfg_path.exists():
         raise FileNotFoundError("缺少configs/design_requirements.yaml,请先创建该文件")
     cfg = load_yaml(cfg_path)
     templates = cfg.get("templates", []) or []
 
+    # 6)auto_expand时生成auto_reqs(从flows/rules扩需求)
     extra_n = int(os.environ.get("DESIGN_AUTO_EXPAND_N", "120"))
     auto_reqs = expand_requirements_from_flows_and_rules(flows, rules, max_n=extra_n) if auto_expand else []
 
@@ -836,8 +932,16 @@ def main():
         })
 
     all_reqs.extend(auto_reqs)
+    '''
+    all_reqs整体里会同时存在三类来源:
+    source_type="yaml"-来自design_requirements.yaml
+    source_type="flow"-来自expand_requirements_from_flows_and_rules里对flows的扩展
+    source_type="rule"-来自expand_requirements_from_flows_and_rules里对rules的扩展
+    yaml那批“不是rule/flow需求”,
+    all_reqs这个集合里“确实会混有rule/flow需求”'''
 
-    # 去重(按文本去重,变体在后面生成)
+    # 7)合并all_reqs并去重(按domain+requirement_zh+requirement_en) -
+    #  按文本去重,变体在后面生成
     seen = set()
     deduped = []
     for r in all_reqs:
@@ -849,20 +953,26 @@ def main():
 
     samples: List[Dict[str, Any]] = []
 
+    # 8)对每条需求：
     for r in all_reqs:
         domain = r.get("domain", "mixed")
         rid = r.get("id") or make_id("req", (r.get("requirement_zh") or r.get("requirement_en") or ""))
 
+        # domain→summarize_repo_context
         repo_context = summarize_repo_context(domain_map, domain)
+
+        # 参考chunk(grounding来源)
         base_ref_chunks = pick_reference_chunks(rules, flows, domain)
         if not base_ref_chunks:
             continue
-
+        
+        # 生成variants_per_req个变体：每次shuffle ref_chunks
         # 为了多样性:每次变体打乱证据chunk顺序
         for v in range(max(1, variants_per_req)):
             ref_chunks = list(base_ref_chunks)
             random.shuffle(ref_chunks)
 
+            # build_evidence取k条证据snippet
             evidence_refs, evidence_snippets = build_evidence(ref_chunks, index_map, k=evidence_k, code_max_chars=code_max_chars)
             if not evidence_snippets:
                 continue

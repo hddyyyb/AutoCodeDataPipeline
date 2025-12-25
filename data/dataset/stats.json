@@ -1,34 +1,6 @@
 {
   "repo_index_chunks": 3408,
   "qa": {
-    "before_dedup": 57,
-    "after_dedup": 57,
-    "removed": 0,
-    "metrics": {
-      "count": 57,
-      "language_dist": {
-        "zh": 57
-      },
-      "domain_dist": {
-        "order": 44,
-        "stock": 7,
-        "mixed": 6
-      },
-      "difficulty_dist": {
-        "unknown": 57
-      },
-      "evidence_snippets_avg": 1.0,
-      "code_chars_avg": 1256.439,
-      "trace_steps_avg": 3.0,
-      "snippet_coverage_rate": 1.0,
-      "evidence_avg": 1.0,
-      "qa_type_dist": {
-        "rule": 56,
-        "flow": 1
-      }
-    }
-  },
-  "design": {
     "before_dedup": 60,
     "after_dedup": 60,
     "removed": 0,
@@ -38,29 +10,58 @@
         "zh": 60
       },
       "domain_dist": {
-        "order": 30,
-        "stock": 18,
-        "mixed": 12
+        "order": 46,
+        "mixed": 7,
+        "stock": 7
       },
       "difficulty_dist": {
-        "medium": 48,
-        "easy": 3,
-        "hard": 9
+        "unknown": 60
+      },
+      "evidence_snippets_avg": 1.133,
+      "code_chars_avg": 1421.55,
+      "trace_steps_avg": 3.0,
+      "snippet_coverage_rate": 1.0,
+      "evidence_avg": 1.133,
+      "qa_type_dist": {
+        "rule": 56,
+        "flow": 2,
+        "flow_rule": 2
+      }
+    }
+  },
+  "design": {
+    "before_dedup": 55,
+    "after_dedup": 55,
+    "removed": 0,
+    "metrics": {
+      "count": 55,
+      "language_dist": {
+        "zh": 55
+      },
+      "domain_dist": {
+        "stock": 18,
+        "order": 28,
+        "mixed": 9
+      },
+      "difficulty_dist": {
+        "medium": 43,
+        "hard": 9,
+        "easy": 3
       },
       "evidence_snippets_avg": 3.0,
-      "code_chars_avg": 2547.583,
+      "code_chars_avg": 2446.818,
       "trace_steps_avg": 4.0,
       "snippet_coverage_rate": 1.0,
       "evidence_avg": 3.0
     }
   },
   "final_finetune": {
-    "before_dedup": 117,
-    "after_dedup": 117,
+    "before_dedup": 115,
+    "after_dedup": 115,
     "removed": 0,
     "splits": {
-      "train": 93,
-      "dev": 12,
+      "train": 92,
+      "dev": 11,
       "test": 12
     }
   }
