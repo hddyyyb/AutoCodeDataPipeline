@@ -139,6 +139,7 @@ Intermediate artifacts are intentionally preserved to ensure **full auditability
 ---
 
 ## 8. How to Run (Minimal Example)
+ The full pipeline can be executed end-to-end in minutes on a laptop for a medium-sized repository.
 
 ### Step 1–3: Build Structured Semantic Artifacts
 
@@ -183,7 +184,16 @@ These steps are optional and serve as a sanity check to demonstrate that the gen
 
 ---
 
-## 9. Notes
+## 9. Environment
+
+- Python >= 3.9
+- Tested on Windows; Linux / macOS compatible
+- Dependency: PyYAML
+
+Steps 01–07 run on CPU only.
+Steps 08–10 are optional.
+
+## 10. Notes
 
 - Multilingual support is implemented at the task generation layer and is optional.
 - All generated samples include explicit code evidence and reasoning traces.
