@@ -28,14 +28,17 @@ ROOT = Path(__file__).resolve().parents[1]
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 
 
+# 检查字符串是否包含中文字符。用于英文模式下过滤/兜底。
 def has_cjk(s: str) -> bool:
     return bool(s and _CJK_RE.search(s))
 
 
+# sha1_text(s)
 def sha1_text(s: str) -> str:
     return hashlib.sha1(s.encode("utf-8", errors="ignore")).hexdigest()
 
 
+# 返回prefix_+sha1(seed)前10位。用于sample_id稳定且短。
 def make_id(prefix: str, seed: str) -> str:
     return prefix + "_" + sha1_text(seed)[:10]
 
@@ -45,6 +48,7 @@ def make_id(prefix: str, seed: str) -> str:
 # -----------------------------
 def get_en_strict_level() -> int:
     """
+    读取环境变量QA_STRICT_EN并规范到0/1/2。控制英文样本的清洗策略。
     QA_STRICT_EN:
       0=off(不清洗)
       1=fallback(默认:遇中文用fallback替换)
@@ -82,6 +86,10 @@ def normalize_lang(lang: str) -> str:
 
 
 def resolve_language(default_lang: str = "zh") -> str:
+    '''决定最终语言模式的优先级：
+    1)优先看环境变量LANG是否明确设置为zh/en/bilingual等
+    2)否则读取configs/runtime.yaml里的language.mode
+    3)否则用默认值'''
     env_lang = os.environ.get("LANG")
     if env_lang and env_lang.strip().lower() in ("zh", "en", "bilingual", "bi", "both", "zh+en", "en+zh"):
         return normalize_lang(env_lang)
@@ -118,7 +126,7 @@ def write_jsonl(path: Path, rows: List[Dict[str, Any]]) -> None:
 
 
 # -----------------------------
-# Evidence helpers
+# 证据构造相关
 # -----------------------------
 def detect_code_lang(file_path: str) -> str:
     fp = (file_path or "").lower()
@@ -141,7 +149,7 @@ def detect_code_lang(file_path: str) -> str:
     return ""
 
 
-def trim_code(code: str, max_chars: int) -> str:
+def trim_code(code: str, max_chars: int) -> str:  # 截断代码避免单条样本太长
     if not code:
         return ""
     if len(code) <= max_chars:
@@ -149,6 +157,7 @@ def trim_code(code: str, max_chars: int) -> str:
     return code[: max_chars - 20] + "\n/* ... truncated ... */\n"
 
 
+# build_evidence(chunk_id,index_map,code_max_chars)
 def build_evidence(chunk_id: str, index_map: Dict[str, Dict[str, Any]], code_max_chars: int) -> Dict[str, Any]:
     r = index_map[chunk_id]
     return {
@@ -162,6 +171,7 @@ def build_evidence(chunk_id: str, index_map: Dict[str, Dict[str, Any]], code_max
     }
 
 
+# ev["code"]包装成markdown代码块：lang\ncode\n 用于最终答案里的【原文代码段】/ [Code Snippet]部分。
 def format_code_block(ev: Dict[str, Any]) -> str:
     code = ev.get("code") or ""
     if not code:
@@ -171,9 +181,10 @@ def format_code_block(ev: Dict[str, Any]) -> str:
 
 
 # -----------------------------
-# boundary/focus tagging
+# boundary/focus相关
 # -----------------------------
 def infer_boundary(file_path: str) -> str:
+    # 简单启发式：路径里含/controller/service/mapper/dao/config或后缀Controller.java等，映射到boundary标签。用于代表性配额和统计覆盖。
     fp = (file_path or "").replace("\\", "/").lower()
     if "/controller/" in fp or fp.endswith("controller.java"):
         return "controller"
@@ -186,6 +197,7 @@ def infer_boundary(file_path: str) -> str:
     return "other"
 
 
+# 关键行匹配的词表与正则：事务、锁、库存、状态、异常、分支关键字、timeout、幂等等。用于从证据中抽“信息密度最高的行”。
 _KEY_PATTERNS = [
     r"@Transactional", r"\btransaction\b", r"\brollback\b",
     r"\block\b", r"reserve", r"deduct", r"reduce", r"release", r"unlock",
@@ -200,6 +212,8 @@ _key_re = re.compile("|".join(_KEY_PATTERNS), re.IGNORECASE)
 
 
 def extract_key_lines(code: str, max_lines: int = 10, max_len: int = 220) -> List[str]:
+    '''逐行扫描code，只要命中_key_re就加入out，去重、截长，最多取max_lines行。
+        重要：它让答案不是纯模板，而是“模板+证据关键行”。'''
     if not code:
         return []
     out: List[str] = []
@@ -217,6 +231,8 @@ def extract_key_lines(code: str, max_lines: int = 10, max_len: int = 220) -> Lis
     return out
 
 
+# 把关键行拼成blob后按规则推focus
+# focus--从证据代码的“关键行”里推断主题：
 def infer_focus_from_key_lines(lines: List[str]) -> str:
     blob = "\n".join(lines).lower()
     if "transactional" in blob or "rollback" in blob or "transaction" in blob:
@@ -234,6 +250,7 @@ def infer_focus_from_key_lines(lines: List[str]) -> str:
     return "general"
 
 
+# 把focus映射成人类可读的中英文短语，供结论句和trace用。
 def focus_display(lang: str, focus: str) -> str:
     zh = {
         "transaction": "事务一致性",
@@ -257,7 +274,7 @@ def focus_display(lang: str, focus: str) -> str:
 
 
 # -----------------------------
-# Exclude low-value files
+# 排除低价值文件
 # -----------------------------
 def compile_exclude_regex() -> re.Pattern:
     """
@@ -280,12 +297,13 @@ def is_excluded_file(file_path: str, ex_re: re.Pattern) -> bool:
 
 
 # -----------------------------
-# EN fallback inference(仅兜底)
+# 英文兜底推断(只在英文模式且缺字段时用)
 # -----------------------------
 _METHOD_RE = re.compile(r"\b(public|private|protected)\s+[\w<>\[\]]+\s+(\w+)\s*\(", re.IGNORECASE)
 
 
 def infer_en_topic_from_evidence(ev: Dict[str, Any], key_lines: List[str]) -> Tuple[str, str]:
+    # 当rule/flow缺少英文title/desc时，生成一个“可用但一般”的英文topic
     fp = (ev.get("file_path") or "").replace("\\", "/")
     code = ev.get("content") or ""
     ext = (ev.get("code_lang") or "").lower()
@@ -332,8 +350,10 @@ def infer_en_topic_from_evidence(ev: Dict[str, Any], key_lines: List[str]) -> Tu
 
 
 # -----------------------------
-# Question diversification pools
+# 问法多样性池
 # -----------------------------
+
+# 按focus分类的规则问句模板池。choose_rule_question会随机挑一个并format注入title和file_path。
 _RULE_Q_ZH = {
     "transaction": [
         "这段实现的事务边界在哪里?哪些操作必须保持原子性?请结合{file_path}说明。",
@@ -396,6 +416,7 @@ _RULE_Q_EN = {
     ],
 }
 
+# 流程问句模板池。choose_flow_question随机挑一个注入flow_name。
 _FLOW_Q_ZH = [
     "请解释流程“{flow_name}”的端到端步骤,并标注每一步对应的代码位置。",
     "从调用链角度梳理“{flow_name}”包含哪些关键步骤?每一步的证据代码在哪里?",
@@ -419,11 +440,12 @@ def choose_flow_question(lang: str, flow_name: str) -> str:
     arr = _FLOW_Q_ZH if lang == "zh" else _FLOW_Q_EN
     return random.choice(arr).format(flow_name=flow_name)
 
-
 # -----------------------------
-# Answer builders
+# 答案构造
 # -----------------------------
 def build_rule_conclusion(lang: str, title: str, focus: str, key_lines: List[str]) -> str:
+    '''核心是：按focus输出不同的“结论句+检查点”。
+    不逐行解释代码，而是给训练一个更像“架构/规则总结”的答案骨架'''
     f = focus_display(lang, focus)
     if lang == "zh":
         hints = []
@@ -465,6 +487,7 @@ def build_rule_conclusion(lang: str, title: str, focus: str, key_lines: List[str
         return f"Key points for '{title}':\n- " + "\n- ".join(hints)
 
 
+# 随机选一组“推理步骤模板”，用于trace_digest和答案的【推理过程】部分
 def build_trace(lang: str, focus: str, title_or_flow: str) -> List[str]:
     f = focus_display(lang, focus)
     if lang == "zh":
@@ -482,6 +505,7 @@ def build_trace(lang: str, focus: str, title_or_flow: str) -> List[str]:
     return random.choice(variants)
 
 
+# 把核心答案包成统一格式
 def wrap_answer(answer_core: str, evidences: List[Dict[str, Any]], trace_steps: List[str], lang: str) -> str:
     is_zh = (lang == "zh")
     ev_lines = []
@@ -509,6 +533,7 @@ def wrap_answer(answer_core: str, evidences: List[Dict[str, Any]], trace_steps: 
     )
 
 
+# 把flow.steps整理成“步骤列表+每步代码位置”：
 def build_flow_answer(flow: Dict[str, Any], evs: List[Dict[str, Any]], lang: str) -> str:
     steps = flow.get("steps") or []
     if not steps:
@@ -539,7 +564,7 @@ def build_flow_answer(flow: Dict[str, Any], evs: List[Dict[str, Any]], lang: str
 
 
 # -----------------------------
-# Quota sampling for representativeness
+# 配额抽样(代表性保障核心) / Quota sampling for representativeness
 # -----------------------------
 def _quota_counts(target_n: int, ratio: Dict[str, int]) -> Dict[str, int]:
     total = sum(ratio.values()) if ratio else 1
@@ -584,7 +609,7 @@ def quota_sample(
         cid = ev0.get("chunk_id", "") or ""
         return boundary, focus, fp, cid
 
-    # pass1:strict满足boundary+focus
+    # pass1:同时满足boundary配额+focus配额+file/chunk限流
     for s in pool:
         if len(picked) >= target_n:
             break
@@ -606,7 +631,7 @@ def quota_sample(
         if cid:
             used_chunk[cid] += 1
 
-    # pass2:放松focus,仍保持boundary
+    # pass2:放松focus配额，只保boundary+限流
     if len(picked) < target_n:
         for s in pool:
             if len(picked) >= target_n:
@@ -654,6 +679,7 @@ def quota_sample(
 
 
 def print_coverage(samples: List[Dict[str, Any]], title: str) -> None:
+    # 用于肉眼检查“有没有某层或某类被严重偏置”。
     b = Counter()
     f = Counter()
     d = Counter()
@@ -678,7 +704,7 @@ def print_coverage(samples: List[Dict[str, Any]], title: str) -> None:
 
 
 # -----------------------------
-# Generators
+# 两类样本生成器 Generators
 # -----------------------------
 def generate_rule_qa(
     rule: Dict[str, Any],
@@ -687,15 +713,23 @@ def generate_rule_qa(
     code_max_chars: int,
     ex_re: re.Pattern,
 ) -> Dict[str, Any]:
+    '''  
+    :param: 一条rule+index_map+lang等
+    :return: 一个完整QA样本dict(含text和meta_v2)，或{}表示跳过
+    '''
+
+    # 1)取rule.evidence_chunks的第一个cid作为证据(只用首个，保证单条规则QA更聚焦)
     ev_chunks = rule.get("evidence_chunks") or []
     cid = ev_chunks[0] if ev_chunks else None
     if (not cid) or (cid not in index_map):
         return {}
 
+    # 2)build_evidence得到ev
     ev = build_evidence(cid, index_map, code_max_chars)
     if is_excluded_file(ev["file_path"], ex_re):
         return {}
 
+    # 3)从ev.content抽关键行key_lines，推focus，再推boundary
     rule_id = rule.get("rule_id") or rule.get("id") or ""
     domain = rule.get("domain") or "mixed"
 
@@ -707,6 +741,8 @@ def generate_rule_qa(
     boundary = infer_boundary(ev["file_path"])
 
     strict_lv = get_en_strict_level()
+
+    # 4)语言处理：
     if lang == "en":
         title_en = (rule.get("title_en") or "").strip()
         desc_en = (rule.get("description_en") or "").strip()
@@ -724,11 +760,13 @@ def generate_rule_qa(
     else:
         title = title_raw or (rule_id or "业务规则")
         desc = desc_raw or ""
-
+    
+    # 5)选问题模板
     q = choose_rule_question(lang, focus, title=title, file_path=ev["file_path"])
+    # 6)构建结论
     conclusion = build_rule_conclusion(lang, title=title, focus=focus, key_lines=key_lines)
     trace_steps = build_trace(lang, focus, title)
-
+    # 7)组织core：加背景desc、加关键行摘录
     if lang == "zh":
         bg = f"背景:{desc}" if desc else "背景:未提供结构化描述,以下从代码推断。"
         kl = "\n".join([f"- {x}" for x in key_lines]) if key_lines else "- N/A"
@@ -738,6 +776,7 @@ def generate_rule_qa(
         kl = "\n".join([f"- {x}" for x in key_lines]) if key_lines else "- N/A"
         core = f"{bg}\n\n{conclusion}\n\nKey lines:\n{kl}"
 
+    # 8)wrap_answer把core+证据+trace拼成最终answer
     a = wrap_answer(core, [ev], trace_steps, lang)
     text = f"### Instruction\n{q}\n\n### Response\n{a}\n"
 
@@ -767,6 +806,8 @@ def generate_rule_qa(
         "source": "AutoCodeDataPipeline",
     }
 
+    # 每条规则QA只挂一个evidence chunk--> 
+    # 答案更像“这段实现体现了某类规则”，而不是“规则在全仓库所有证据的全景总结”
     return {
         "sample_id": make_id("qa", f"rule|{rule_id}|{lang}|{cid}|{focus}|{sha1_text(q)[:6]}"),
         "task_type": "qa",
@@ -795,7 +836,8 @@ def generate_rule_qa(
         },
         "text": text,
         "meta_v2": meta_v2,
-    }
+    } 
+
 
 
 def generate_flow_qa(
@@ -806,7 +848,23 @@ def generate_flow_qa(
     flow_max_evs: int,
     ex_re: re.Pattern,
 ) -> Dict[str, Any]:
+    '''
+    :param: 一条flow+index_map+lang等
+    :return: 一个流程QA样本或{}
+    '''
     evs: List[Dict[str, Any]] = []
+
+    # 1)遍历flow.steps，收集每步evidence_chunk对应的ev，最多flow_max_evs条(默认3)
+    '''
+    ev={
+        "chunk_id": chunk_id,
+        "file_path": r["file_path"],
+        "start_line": r["start_line"],
+        "end_line": r["end_line"],
+        "content": r.get("content") or "",
+        "code_lang": detect_code_lang(r["file_path"]),
+        "code": trim_code(r.get("content") or "", code_max_chars),
+    }'''
     for s in flow.get("steps", []) or []:
         cid = s.get("evidence_chunk")
         if cid and cid in index_map:
@@ -833,13 +891,22 @@ def generate_flow_qa(
     else:
         flow_name = (flow.get("name") or "").strip() or (flow_id or "业务流程")
 
+    # 2)选择流程问句choose_flow_question
+    '''_FLOW_Q_ZH = [
+    "请解释流程“{flow_name}”的端到端步骤,并标注每一步对应的代码位置。",
+    "从调用链角度梳理“{flow_name}”包含哪些关键步骤?每一步的证据代码在哪里?",
+    "“{flow_name}”流程的关键分支(成功/失败/取消/超时)如何走?请结合证据代码说明。",
+    ]'''
     q = choose_flow_question(lang, flow_name=flow_name)
 
-    key_lines = extract_key_lines(evs[0].get("content") or "", max_lines=10)
+    # 3)用evs[0]抽关键行推focus和boundary
+    key_lines = extract_key_lines(evs[0].get("content") or "", max_lines=10)  #  让答案不是纯模板，而是“模板+证据关键行”
     focus = infer_focus_from_key_lines(key_lines)
     boundary = infer_boundary(evs[0]["file_path"])
 
+    # 4)build_flow_answer输出步骤与代码位置, 步骤列表+每步代码位置
     core_lines = build_flow_answer(flow, evs, lang)
+
     if lang == "zh":
         core = f"关注点:{focus_display(lang, focus)}\n\n{core_lines}"
     else:

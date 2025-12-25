@@ -11,14 +11,14 @@
       },
       "domain_dist": {
         "order": 43,
-        "stock": 7,
-        "mixed": 7
+        "mixed": 7,
+        "stock": 7
       },
       "difficulty_dist": {
         "unknown": 57
       },
       "evidence_snippets_avg": 1.035,
-      "code_chars_avg": 1281.298,
+      "code_chars_avg": 1295.088,
       "trace_steps_avg": 3.0,
       "snippet_coverage_rate": 1.0,
       "evidence_avg": 1.035,
@@ -29,38 +29,38 @@
     }
   },
   "design": {
-    "before_dedup": 53,
-    "after_dedup": 53,
+    "before_dedup": 46,
+    "after_dedup": 46,
     "removed": 0,
     "metrics": {
-      "count": 53,
+      "count": 46,
       "language_dist": {
-        "zh": 53
+        "zh": 46
       },
       "domain_dist": {
-        "order": 26,
+        "order": 19,
         "stock": 18,
         "mixed": 9
       },
       "difficulty_dist": {
-        "medium": 44,
+        "medium": 37,
         "hard": 6,
         "easy": 3
       },
       "evidence_snippets_avg": 3.0,
-      "code_chars_avg": 2536.868,
+      "code_chars_avg": 2360.717,
       "trace_steps_avg": 4.0,
       "snippet_coverage_rate": 1.0,
       "evidence_avg": 3.0
     }
   },
   "final_finetune": {
-    "before_dedup": 110,
-    "after_dedup": 110,
+    "before_dedup": 103,
+    "after_dedup": 103,
     "removed": 0,
     "splits": {
-      "train": 88,
-      "dev": 11,
+      "train": 82,
+      "dev": 10,
       "test": 11
     }
   }
