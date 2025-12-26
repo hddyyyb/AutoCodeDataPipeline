@@ -561,6 +561,8 @@ def generate_design_output(
 ) -> Dict[str, Any]:
     '''
     这是“把需求转成结构化设计”的核心模板生成器
+
+    v9 changes:
     - Use requirement text to infer intent(flow/rule/generic) and adjust components/APIs/data_model/sequence accordingly.
     - Surface evidence roles (controller/service/mapper/config) in evidence_hints to better match repo grounding.
     '''
