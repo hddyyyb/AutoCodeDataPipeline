@@ -1,68 +1,70 @@
 {
   "repo_index_chunks": 3408,
   "qa": {
-    "before_dedup": 60,
-    "after_dedup": 60,
+    "before_dedup": 121,
+    "after_dedup": 121,
     "removed": 0,
     "metrics": {
-      "count": 60,
+      "count": 121,
       "language_dist": {
-        "zh": 60
+        "zh": 60,
+        "en": 61
       },
       "domain_dist": {
-        "order": 46,
-        "mixed": 7,
-        "stock": 7
+        "stock": 14,
+        "order": 91,
+        "mixed": 16
       },
       "difficulty_dist": {
-        "unknown": 60
+        "unknown": 121
       },
-      "evidence_snippets_avg": 1.133,
-      "code_chars_avg": 1421.55,
+      "evidence_snippets_avg": 1.132,
+      "code_chars_avg": 1403.215,
       "trace_steps_avg": 3.0,
       "snippet_coverage_rate": 1.0,
-      "evidence_avg": 1.133,
+      "evidence_avg": 1.132,
       "qa_type_dist": {
-        "rule": 56,
-        "flow": 2,
-        "flow_rule": 2
+        "rule": 113,
+        "flow_rule": 4,
+        "flow": 4
       }
     }
   },
   "design": {
-    "before_dedup": 55,
-    "after_dedup": 55,
+    "before_dedup": 110,
+    "after_dedup": 110,
     "removed": 0,
     "metrics": {
-      "count": 55,
+      "count": 110,
       "language_dist": {
-        "zh": 55
+        "en": 51,
+        "zh": 59
       },
       "domain_dist": {
-        "stock": 18,
-        "order": 28,
-        "mixed": 9
+        "order": 47,
+        "mixed": 24,
+        "stock": 39
       },
       "difficulty_dist": {
-        "medium": 43,
+        "medium": 98,
         "hard": 9,
         "easy": 3
       },
       "evidence_snippets_avg": 3.0,
-      "code_chars_avg": 2446.818,
+      "code_chars_avg": 2514.564,
       "trace_steps_avg": 4.0,
       "snippet_coverage_rate": 1.0,
       "evidence_avg": 3.0
     }
   },
   "final_finetune": {
-    "before_dedup": 115,
-    "after_dedup": 115,
+    "before_dedup": 231,
+    "after_dedup": 231,
     "removed": 0,
     "splits": {
-      "train": 92,
-      "dev": 11,
-      "test": 12
+      "train": 184,
+      "dev": 23,
+      "test": 24
     }
   }
 }

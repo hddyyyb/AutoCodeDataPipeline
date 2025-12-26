@@ -487,6 +487,70 @@ def expand_requirements_from_flows_and_rules(flows: List[Dict[str, Any]], rules:
 # -----------------------------
 # 设计输出生成(核心函数)  (dynamic, zh/en separated)
 # -----------------------------
+# -----------------------------
+# Requirement intent inference (flow/rule/generic)
+# -----------------------------
+def _infer_requirement_intent(requirement: str) -> Dict[str, Any]:
+    """
+    Best-effort inference from the requirement text:
+      - type: flow / rule / generic
+      - subject: extracted flow/rule name if possible
+      - signals: keyword flags that may affect design output
+    NOTE: we intentionally keep this lightweight (no external deps) to avoid destabilizing Step05.
+    """
+    req = (requirement or "").strip()
+    low = req.lower()
+
+    def _extract_between_quotes(s: str) -> str:
+        # handles “xxx” / "xxx" / 'xxx'
+        m = re.search(r"[“\"']([^”\"']{1,80})[”\"']", s)
+        return (m.group(1).strip() if m else "")
+
+    # classify
+    is_flow = ("流程" in req) or ("flow" in low)
+    is_rule = ("规则" in req) or ("rule" in low) or ("validation" in low and "audit" in low)
+
+    if is_rule and not is_flow:
+        rtype = "rule"
+    elif is_flow and not is_rule:
+        rtype = "flow"
+    elif is_rule and is_flow:
+        # prefer explicit 'Rule:'/'Flow:' in bilingual context if present
+        rtype = "rule" if "rule:" in low else "flow" if "flow:" in low else "generic"
+    else:
+        rtype = "generic"
+
+    subject = _extract_between_quotes(req)
+    if not subject:
+        # try to capture: 围绕XXX流程 / Enhance the flow 'XXX'
+        m = re.search(r"围绕([^\s，,]{1,40})流程", req)
+        if m:
+            subject = m.group(1).strip()
+    if not subject:
+        m = re.search(r"enhance\s+the\s+flow\s+'([^']{1,80})'", low)
+        if m:
+            subject = m.group(1).strip()
+    if not subject:
+        m = re.search(r"rule\s+'([^']{1,80})'", low)
+        if m:
+            subject = m.group(1).strip()
+
+    signals = {
+        "need_idempotency": ("幂等" in req) or ("idempot" in low) or ("requestid" in low),
+        "need_compensation": ("补偿" in req) or ("compensation" in low) or ("saga" in low),
+        "need_observability": ("可观测" in req) or ("观测" in req) or ("observab" in low) or ("trace" in low),
+        "need_audit": ("审计" in req) or ("audit" in low),
+        "need_error_semantics": ("异常语义" in req) or ("error semantic" in low) or ("error semantics" in low),
+        "mention_stock_reserve": ("预占" in req) or ("reserve" in low),
+        "mention_ttl": ("ttl" in low) or ("超时" in req) or ("expire" in low) or ("过期" in req),
+        "mention_reconcile": ("对账" in req) or ("reconcile" in low) or ("reconciliation" in low),
+    }
+    return {"type": rtype, "subject": subject, "signals": signals}
+
+
+# -----------------------------
+# 设计输出生成(核心函数)  (dynamic, zh/en separated)
+# -----------------------------
 def generate_design_output(
     requirement: str,
     domain: str,
@@ -497,26 +561,54 @@ def generate_design_output(
 ) -> Dict[str, Any]:
     '''
     这是“把需求转成结构化设计”的核心模板生成器
+
+    v9 changes:
+    - Use requirement text to infer intent(flow/rule/generic) and adjust components/APIs/data_model/sequence accordingly.
+    - Surface evidence roles (controller/service/mapper/config) in evidence_hints to better match repo grounding.
     '''
+    req_info = _infer_requirement_intent(requirement)
+    req_type = req_info.get("type") or "generic"
+    subject = req_info.get("subject") or ""
+    sig = req_info.get("signals") or {}
+
     classes = name_hints.get("classes") or []
     methods = name_hints.get("methods") or []
+    roles = name_hints.get("roles") or []
     files = name_hints.get("files") or []
 
-    evidence_hints = []
+    evidence_hints: List[str] = []
     if lang == "zh":
         if classes:
             evidence_hints.append(f"复用/改造类:{','.join(classes[:3])}")
         if methods:
             evidence_hints.append(f"关注入口方法:{','.join(methods[:4])}")
+        if roles:
+            # roles来自extract_names_from_snippets的根路径推断
+            uniq_roles = []
+            for r in roles:
+                if r and r not in uniq_roles:
+                    uniq_roles.append(r)
+            evidence_hints.append(f"涉及分层:{','.join(uniq_roles[:4])}")
         if files:
             evidence_hints.append(f"证据文件:{','.join(files[:2])}")
+        if req_type != "generic":
+            evidence_hints.append(f"需求类型:{'流程增强' if req_type=='flow' else '规则校验审计'}" + (f"({subject})" if subject else ""))
     else:
         if classes:
             evidence_hints.append(f"Reuse/extend classes:{', '.join(classes[:3])}")
         if methods:
             evidence_hints.append(f"Focus on entry methods:{', '.join(methods[:4])}")
+        if roles:
+            uniq_roles = []
+            for r in roles:
+                if r and r not in uniq_roles:
+                    uniq_roles.append(r)
+            evidence_hints.append(f"Layers hinted:{', '.join(uniq_roles[:4])}")
         if files:
             evidence_hints.append(f"Evidence files:{', '.join(files[:2])}")
+        if req_type != "generic":
+            label = "flow-enhancement" if req_type == "flow" else "rule-validation-audit"
+            evidence_hints.append(f"Requirement type:{label}" + (f" ({subject})" if subject else ""))
 
     strat_text = [(s["zh"] if lang == "zh" else s["en"]) for s in strategies]
     strat_ids = [s["id"] for s in strategies]
@@ -526,13 +618,15 @@ def generate_design_output(
     data_model: List[str] = []
     risks: List[str] = []
 
-    if domain == "stock":  # 根据domain先放一套“领域骨架组件+API+数据模型”：
+    # 1) domain baseline skeleton
+    if domain == "stock":
         if lang == "zh":
             components += [
                 "StockReserveService(新增/扩展):预占/释放/确认入口(幂等)",
                 "StockReserveMapper(新增):预占记录持久化",
-                "StockReleaseJob(新增):超时释放扫描任务",
             ]
+            if sig.get("mention_ttl") or ("ttl_reserve" in strat_ids):
+                components.append("StockReleaseJob(新增):超时释放扫描任务")
             apis += [
                 "POST/stock/reserve:预占库存(返回reserveId/expireAt)",
                 "POST/stock/release:释放预占(幂等)",
@@ -542,8 +636,9 @@ def generate_design_output(
             components += [
                 "StockReserveService(new/extend): reserve/release/confirm entry points(idempotent)",
                 "StockReserveMapper(new): persistence for reserve records",
-                "StockReleaseJob(new): timeout release scanner job",
             ]
+            if sig.get("mention_ttl") or ("ttl_reserve" in strat_ids):
+                components.append("StockReleaseJob(new): timeout release scanner job")
             apis += [
                 "POST /stock/reserve: reserve stock(returns reserveId/expireAt)",
                 "POST /stock/release: release reservation(idempotent)",
@@ -557,8 +652,9 @@ def generate_design_output(
             components += [
                 "OrderStateGuard(新增):统一状态校验/流转入口",
                 "OrderAuditService(新增):状态变更审计",
-                "ReconcileJob(可选):对账/补偿任务",
             ]
+            if sig.get("mention_reconcile"):
+                components.append("ReconcileJob(可选):对账/补偿任务")
             apis += [
                 "POST/order/state/transition:统一状态流转入口(携带requestId)",
                 "GET/order/audit/{orderId}:查询审计记录",
@@ -567,8 +663,9 @@ def generate_design_output(
             components += [
                 "OrderStateGuard(new): centralized state validation/transition entry",
                 "OrderAuditService(new): audit trail for state changes",
-                "ReconcileJob(optional): reconciliation/compensation job",
             ]
+            if sig.get("mention_reconcile"):
+                components.append("ReconcileJob(optional): reconciliation/compensation job")
             apis += [
                 "POST /order/state/transition: centralized transition entry(carries requestId)",
                 "GET /order/audit/{orderId}: query audit records",
@@ -576,8 +673,50 @@ def generate_design_output(
         data_model += [
             "order_audit(id,order_id,from_status,to_status,source,request_id,created_at)",
         ]
-    
-    # 再根据策略sid追加组件/表/说明：
+
+    # 2) requirement-driven specialization (flow vs rule)
+    if req_type == "flow":
+        # add orchestration + observability emphasis (even if strategy set does not include it)
+        flow_name = subject or ("业务流程" if lang == "zh" else "business flow")
+        if lang == "zh":
+            components += [
+                f"FlowOrchestrator(新增):{flow_name}流程编排(步骤拆分+失败回滚触发)",
+                "FlowTraceService(新增):流程级traceId/spanId贯穿日志与指标",
+            ]
+            if "saga" in strat_ids or sig.get("need_compensation"):
+                components.append("CompensationService(新增):补偿动作集合(可重入)")
+            apis.append("POST/flow/execute:触发流程执行(携带traceId/requestId)")
+        else:
+            components += [
+                f"FlowOrchestrator(new): orchestrate '{flow_name}' steps and trigger rollback on failures",
+                "FlowTraceService(new): propagate traceId/spanId across logs/metrics",
+            ]
+            if "saga" in strat_ids or sig.get("need_compensation"):
+                components.append("CompensationService(new): a set of re-entrant compensations")
+            apis.append("POST /flow/execute: execute the flow(carries traceId/requestId)")
+
+    elif req_type == "rule":
+        rule_name = subject or ("业务规则" if lang == "zh" else "business rule")
+        if lang == "zh":
+            components += [
+                f"RuleValidatorRegistry(新增):规则“{rule_name}”统一校验入口(可插拔)",
+                "ErrorSemanticCatalog(新增):错误码/异常语义统一(对外稳定)",
+            ]
+            if sig.get("need_audit") or domain != "stock":
+                components.append("RuleAuditService(新增):规则触发审计(输入/输出/异常)")
+            apis.append("POST/rule/validate:统一校验入口(返回标准化错误语义)")
+            data_model.append("rule_audit(id,rule_id,biz_id,inputs,result,error_code,created_at)")
+        else:
+            components += [
+                f"RuleValidatorRegistry(new): plug-in validators for rule '{rule_name}'",
+                "ErrorSemanticCatalog(new): stable error codes and standardized semantics",
+            ]
+            if sig.get("need_audit") or domain != "stock":
+                components.append("RuleAuditService(new): audit rule evaluation(inputs/outputs/errors)")
+            apis.append("POST /rule/validate: centralized validation(return standardized errors)")
+            data_model.append("rule_audit(id,rule_id,biz_id,inputs,result,error_code,created_at)")
+
+    # 3) strategy-driven augmentation (original behavior preserved)
     for sid in strat_ids:
         if sid == "outbox":
             if lang == "zh":
@@ -587,7 +726,10 @@ def generate_design_output(
                 components.append("OutboxEventService(new): persist events and dispatch asynchronously")
                 data_model.append("outbox_event(id,event_type,biz_id,payload,status,created_at,updated_at)")
         elif sid == "saga":
-            components.append("CompensationService(new): a set of re-entrant compensations" if lang == "en" else "CompensationService(新增):补偿动作集合(可重入)")
+            # avoid dup (we may already add it in flow specialization)
+            label = "CompensationService(new): a set of re-entrant compensations" if lang == "en" else "CompensationService(新增):补偿动作集合(可重入)"
+            if label not in components:
+                components.append(label)
         elif sid == "idempotency_key":
             if lang == "zh":
                 components.append("IdempotencyService(新增):幂等键校验+去重表")
@@ -614,6 +756,7 @@ def generate_design_output(
                 "VersionedUpdateHelper(新增):条件更新/失败重试"
             )
 
+    # 4) risk & mitigation notes, plus requirement-signal sanity checks
     for s in strategies:
         if lang == "zh":
             pts = s.get("points_zh") or []
@@ -622,38 +765,94 @@ def generate_design_output(
             pts = s.get("points_en") or []
             risks.append(f"Strategy:{s['en']}.Key points:{', '.join(pts[:3])}")
 
+    if sig.get("need_idempotency") and ("idempotency_key" not in strat_ids):
+        risks.append("需求强调幂等但策略未覆盖:idempotency_key。建议至少引入requestId去重表并设置唯一约束。" if lang == "zh"
+                    else "Requirement emphasizes idempotency but strategy set lacks idempotency_key; add requestId dedup table with unique constraint.")
+    if sig.get("need_compensation") and ("saga" not in strat_ids):
+        risks.append("需求强调失败补偿但策略未覆盖:saga。建议为关键步骤补充可重入补偿接口与状态记录。" if lang == "zh"
+                    else "Requirement emphasizes compensations but strategy set lacks saga; add re-entrant compensation APIs and state tracking.")
+    if sig.get("need_audit") and (not any("audit" in (c or "").lower() or "审计" in (c or "") for c in components)):
+        risks.append("需求强调审计,建议将关键校验/状态变更写入审计表并统一错误语义。" if lang == "zh"
+                    else "Requirement emphasizes auditing; persist key evaluations/transitions into audit tables and standardize error semantics.")
+
+    # 5) overview & sequence flows
     if lang == "zh":
-        overview = f"基于现有Controller/Service/Mapper分层,按策略组合({';'.join(strat_text)})做最小侵入式增强,保证幂等、并发安全与最终一致性。"
-        sequence = [
-            "1)入口携带requestId,先做幂等校验/去重",
-            "2)执行核心业务(状态流转/预占扣减),失败进入补偿或回滚",
-            "3)记录审计与可观测日志,必要时写入Outbox事件",
-            "4)异步任务(对账/释放/投递)保证最终一致性",
-        ]
+        req_head = (requirement or "").strip().replace("\n", " ")
+        req_head = req_head[:28] + ("..." if len(req_head) > 28 else "")
+        subject_hint = f"({subject})" if subject else ""
+        overview = f"围绕需求{subject_hint}做最小侵入式增强:{req_head}。在现有Controller/Service/Mapper分层上,按策略组合({';'.join(strat_text)})落地,补齐幂等、并发安全与最终一致性。"
+        if req_type == "rule":
+            sequence = [
+                "1)统一入口接收业务输入(携带requestId/traceId),选择对应规则校验器",
+                "2)集中校验并输出标准化错误语义(错误码/消息/可恢复性)",
+                "3)写入rule_audit(输入/结果/异常),并对外返回一致的失败语义",
+                "4)必要时通过Outbox/异步任务触发后续处理(告警/补偿/对账)",
+            ]
+        elif req_type == "flow":
+            sequence = [
+                "1)入口携带requestId+traceId,先做幂等校验/去重",
+                "2)FlowOrchestrator按步骤编排执行,关键步骤写审计/指标",
+                "3)失败时触发补偿/回滚(可重入),并记录异常语义与告警",
+                "4)异步任务(对账/释放/投递)保证最终一致性",
+            ]
+        else:
+            sequence = [
+                "1)入口携带requestId,先做幂等校验/去重",
+                "2)执行核心业务(状态流转/预占扣减),失败进入补偿或回滚",
+                "3)记录审计与可观测日志,必要时写入Outbox事件",
+                "4)异步任务(对账/释放/投递)保证最终一致性",
+            ]
         repo_cons = repo_context.get("constraints", [])
     else:
-        overview = f"Follow the existing Controller/Service/Mapper layering and apply the strategy set({'; '.join(strat_text)}) with minimal invasive changes for idempotency, concurrency safety, and eventual consistency."
-        sequence = [
-            "1)Carry requestId; perform idempotency check/dedup first",
-            "2)Run core business(state transition/reserve/deduct); on failure do compensation/rollback",
-            "3)Record audit/observability logs; optionally persist Outbox events",
-            "4)Async jobs(reconcile/release/dispatch) ensure eventual consistency",
-        ]
+        req_head = (requirement or "").strip().replace("\n", " ")
+        req_head = req_head[:32] + ("..." if len(req_head) > 32 else "")
+        subject_hint = f" ({subject})" if subject else ""
+        overview = f"Repository-grounded design{subject_hint}: {req_head}. Follow the existing Controller/Service/Mapper layering and apply the strategy set({'; '.join(strat_text)}) with minimal invasive changes for idempotency, concurrency safety, and eventual consistency."
+        if req_type == "rule":
+            sequence = [
+                "1)Centralized validation entry(carries requestId/traceId) selects the proper validator",
+                "2)Run checks and output standardized error semantics(code/message/retryability)",
+                "3)Persist rule_audit(inputs/result/errors) and return consistent failure responses",
+                "4)Optionally trigger async handling via outbox/jobs(alerting/compensation/reconcile)",
+            ]
+        elif req_type == "flow":
+            sequence = [
+                "1)Carry requestId + traceId; perform idempotency check/dedup first",
+                "2)FlowOrchestrator executes step-by-step and records audits/metrics",
+                "3)On failure, trigger re-entrant compensation/rollback and standardized errors",
+                "4)Async jobs(reconcile/release/dispatch) ensure eventual consistency",
+            ]
+        else:
+            sequence = [
+                "1)Carry requestId; perform idempotency check/dedup first",
+                "2)Run core business(state transition/reserve/deduct); on failure do compensation/rollback",
+                "3)Record audit/observability logs; optionally persist Outbox events",
+                "4)Async jobs(reconcile/release/dispatch) ensure eventual consistency",
+            ]
         repo_cons = repo_constraints_en()
+
+    # de-dup a bit while keeping order
+    def _dedup_keep_order(xs: List[str]) -> List[str]:
+        seen = set()
+        out = []
+        for x in xs:
+            if x and x not in seen:
+                seen.add(x)
+                out.append(x)
+        return out
 
     return {
         "architecture_overview": overview,
-        "evidence_hints": evidence_hints,
+        "evidence_hints": _dedup_keep_order(evidence_hints),
         "strategy_set": strat_text,
         "strategy_ids": strat_ids,
-        "components": components,
-        "apis": apis,
-        "data_model": data_model,
+        "components": _dedup_keep_order(components),
+        "apis": _dedup_keep_order(apis),
+        "data_model": _dedup_keep_order(data_model),
         "sequence_flows": sequence,
-        "risk_and_mitigation": risks,
+        "risk_and_mitigation": _dedup_keep_order(risks),
         "repo_constraints": repo_cons,
     }
-
 
 def build_trace(domain: str, ref_chunks: List[str], strategy_ids: List[str], lang: str) -> List[str]:
     if lang == "en":
@@ -980,6 +1179,7 @@ def main():
             name_hints = extract_names_from_snippets(evidence_snippets)
 
             for lang in langs:
+                # 对每个lang, 选requirement文本
                 if lang == "en":
                     requirement = (r.get("requirement_en") or "").strip()
                     context_en = (r.get("context_en") or "").strip()
@@ -1010,8 +1210,10 @@ def main():
                 # 每个变体重新抽策略,形成不同样本
                 strategies = pick_strategies(domain)
 
+                # 产出结构化设计
                 design_output = generate_design_output(requirement, domain, repo_context, name_hints, strategies, lang)
 
+                # 可选用nlg_templates覆盖overview前缀
                 if "design" in templates_nlg and lang in templates_nlg["design"]:
                     overview_prefix = templates_nlg["design"][lang].get("overview_prefix")
                     if isinstance(overview_prefix, str) and overview_prefix:
@@ -1020,9 +1222,11 @@ def main():
                         else:
                             design_output["architecture_overview"] = overview_prefix.format(domain=domain)
 
+                #  build_trace + build_training_text
                 trace_steps = build_trace(domain, ref_chunks, design_output["strategy_ids"], lang)
                 text = build_training_text(requirement, design_output, evidence_snippets, trace_steps, lang, context_en=context_en)
 
+                # 组装meta_v2与sample dict，append samples
                 meta_v2 = {
                     "task_type": "design",
                     "language": lang,
@@ -1071,16 +1275,16 @@ def main():
                 }
                 samples.append(sample)
 
-    random.shuffle(samples)
+    random.shuffle(samples)  # 9)shuffle samples
     n_total = len(samples)
     if n_total == 0:
         raise RuntimeError("未生成任何Design样本:可能英文被DESIGN_STRICT_EN过滤,或evidence抽取为空。")
 
-    if train_target <= 0:
+    if train_target <= 0:  # 10)算train_target(未指定则按比例)
         train_target = int(n_total * (1.0 - dev_ratio - test_ratio))
         train_target = max(1, train_target)
 
-    remaining = list(samples)
+    remaining = list(samples)   # 11)quota_sample_design抽train，再从剩余抽dev/test
     train = quota_sample_design(remaining, train_target, domain_ratio, strategy_ratio, per_file_cap, per_chunk_cap, seed=seed)
     train_set = set([s["sample_id"] for s in train])
     remaining2 = [s for s in remaining if s["sample_id"] not in train_set]
