@@ -179,6 +179,156 @@ def trim_code(code: str, max_chars: int) -> str:  # 截断代码，避免样本�
         return code
     return code[: max_chars - 20] + "\n/* ... truncated ... */\n"
 
+# =============================
+# 需求相关性rerank选chunk(无外部依赖)
+# =============================
+
+def _tokenize_req(req: str) -> List[str]:
+    """
+    轻量分词:
+    - 英文:按[a-z0-9_]+抽token
+    - 中文:抽一些关键短语+单字(只对少量关键字生效)
+    目的不是NLP完美,而是提供稳定可控的启发式信号
+    """
+    s = (req or "").strip()
+    low = s.lower()
+
+    en_tokens = re.findall(r"[a-z0-9_]{2,}", low)
+
+    # 中文关键短语优先(避免单字太噪)
+    zh_phrases = [
+        "取消", "超时", "过期", "释放", "预占", "库存", "扣减", "回滚", "补偿", "幂等",
+        "审计", "对账", "异常", "错误码", "状态", "流转", "一致性", "重试", "消息", "事件",
+        "支付", "退款", "关单", "下单", "创建订单", "提交订单", "出库", "入库"
+    ]
+    zh_hits = [p for p in zh_phrases if p in s]
+
+    # 少量英文关键短语(补充)
+    en_phrases = [
+        "idempot", "audit", "reconcile", "timeout", "expire", "reserve", "release",
+        "state", "transition", "rollback", "compensation", "saga", "outbox",
+        "dedup", "retry", "event", "dispatch", "stock", "order", "cancel", "refund", "pay"
+    ]
+    en_hits = [p for p in en_phrases if p in low]
+
+    # 去重保持顺序
+    seen = set()
+    out = []
+    for x in (zh_hits + en_hits + en_tokens):
+        if x and x not in seen:
+            seen.add(x)
+            out.append(x)
+    return out[:40]
+
+
+def _infer_req_role_bias(requirement: str) -> Dict[str, float]:
+    """
+    根据需求文本推一个role偏好,用于加权:
+    - 提到接口/接口路径/对外暴露:controller偏好
+    - 提到事务/编排/流程:service偏好
+    - 提到表/字段/where/更新/并发:mapper偏好
+    - 提到配置/yaml:config偏好
+    """
+    s = (requirement or "")
+    low = s.lower()
+    bias = {"controller": 1.0, "service": 1.0, "mapper": 1.0, "config": 1.0, "other": 1.0}
+
+    if any(k in s for k in ["接口", "API", "入参", "出参", "请求", "响应"]) or any(k in low for k in ["endpoint", "api", "http", "controller"]):
+        bias["controller"] += 0.6
+        bias["service"] += 0.2
+
+    if any(k in s for k in ["流程", "编排", "事务", "补偿", "回滚", "一致性"]) or any(k in low for k in ["flow", "orchestr", "transaction", "compensation", "rollback", "consistency"]):
+        bias["service"] += 0.7
+
+    if any(k in s for k in ["表", "字段", "唯一约束", "索引", "where", "更新", "并发", "乐观锁"]) or any(k in low for k in ["table", "column", "unique", "index", "where", "update", "concurrency", "optimistic"]):
+        bias["mapper"] += 0.8
+
+    if any(k in s for k in ["配置", "开关", "yaml", "yml", "properties"]) or any(k in low for k in ["config", "yaml", "yml", "properties"]):
+        bias["config"] += 0.8
+
+    return bias
+
+
+def _chunk_match_score(requirement: str, chunk: Dict[str, Any]) -> float:
+    """
+    启发式相关性打分:
+    - token命中(file_path+content)计数
+    - role偏好加权(controller/service/mapper/config)
+    - 特定关键词额外加成(库存/订单/状态/幂等等)
+    """
+    req = (requirement or "").strip()
+    if not req:
+        return 0.0
+
+    tokens = _tokenize_req(req)
+    fp = ((chunk.get("file_path") or "") + " ").lower()
+    content = ((chunk.get("content") or "") + " ").lower()
+
+    # 命中计数:对短token避免噪声
+    hit = 0
+    strong_hit = 0
+    for t in tokens:
+        tt = t.lower()
+        if len(tt) <= 1:
+            continue
+        in_fp = tt in fp
+        in_ct = tt in content
+        if in_fp or in_ct:
+            hit += 1
+            # file_path命中通常更“结构相关”
+            if in_fp:
+                strong_hit += 1
+            # 关键短语命中提高权重(中文短语/英文短语)
+            if len(tt) >= 4:
+                strong_hit += 1
+
+    # role加权
+    role = infer_role_from_path(chunk.get("file_path") or "")
+    bias = _infer_req_role_bias(req)
+    role_w = bias.get(role, 1.0)
+
+    # domain/业务关键词轻量加成
+    bonus = 0.0
+    # 订单/库存/状态等高频业务词
+    if ("stock" in content or "库存" in (chunk.get("content") or "")) and ("库存" in req or "stock" in req.lower() or "预占" in req or "扣减" in req):
+        bonus += 0.8
+    if ("order" in content or "订单" in (chunk.get("content") or "")) and ("订单" in req or "order" in req.lower() or "取消" in req or "关单" in req):
+        bonus += 0.6
+    if ("status" in content or "状态" in (chunk.get("content") or "")) and ("状态" in req or "transition" in req.lower() or "流转" in req):
+        bonus += 0.4
+    if ("idempot" in content or "幂等" in (chunk.get("content") or "")) and ("幂等" in req or "idempot" in req.lower() or "requestid" in req.lower()):
+        bonus += 0.5
+
+    # 最终分数:强命中更重要,hit次之,role权重再乘
+    score = (strong_hit * 2.0 + hit * 1.0 + bonus) * role_w
+
+    # 很小的随机扰动避免完全同分导致过拟合顺序(不影响可控性)
+    score += random.random() * 0.0005
+    return score
+
+
+def rerank_reference_chunks_by_requirement(
+    requirement: str,
+    base_chunk_ids: List[str],
+    index_map: Dict[str, Dict[str, Any]],
+    top_n: int = 80,
+) -> List[str]:
+    """
+    在domain证据池(base_chunk_ids)内部,按需求相关性rerank,返回更贴合的chunk_id列表
+    - top_n控制候选裁剪,避免后续shuffle/build_evidence时仍有大量弱相关噪声
+    """
+    scored = []
+    for cid in (base_chunk_ids or []):
+        ch = index_map.get(cid)
+        if not ch:
+            continue
+        s = _chunk_match_score(requirement, ch)
+        scored.append((s, cid))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    if top_n and top_n > 0:
+        scored = scored[:top_n]
+    return [cid for _, cid in scored]
+
 
 # -----------------------------
 # 证据构造与命名线索提取
@@ -268,21 +418,58 @@ def extract_names_from_snippets(evidence_snippets: List[Dict[str, Any]]) -> Dict
     }
 
 
+# =============================
+# repo_context的boundary统计按domain过滤
+# =============================
 def summarize_repo_context(domain_map: Dict[str, Any], domain: str) -> Dict[str, Any]:
     '''
+        - boundaries_summary 是统计该domain或mixed相关chunk覆盖
+        - 相关chunk来源:
+            1)domain_map.entities/operations的evidence_chunk_ids
+            2)domain_map.flows的steps.evidence_chunk(如果存在)
         从domain_map里选domain或mixed的entities/operations
         返回: 
         boundaries_summary: controller/service/mapper chunk数量(理解仓库分层覆盖情况)
         top_entities/top_operations: 前若干个实体/操作名
         constraints: 中文约束三条(分层复用、模式复用、关键变更幂等可追溯)
     '''
+    # 1)筛该domain或mixed的entities/operations
     ents = [e for e in domain_map.get("entities", []) if e.get("domain") in (domain, "mixed")]
     ops = [o for o in domain_map.get("operations", []) if o.get("domain") in (domain, "mixed")]
+
+    related_chunks: Set[str] = set()
+
+    # entities/operations evidence_chunk_ids
+    for e in ents:
+        for cid in (e.get("evidence_chunk_ids") or []):
+            if cid:
+                related_chunks.add(cid)
+    for o in ops:
+        for cid in (o.get("evidence_chunk_ids") or []):
+            if cid:
+                related_chunks.add(cid)
+
+    # flows steps evidence_chunk(如果domain_map里有flows字段)
+    for f in (domain_map.get("flows") or []):
+        if (f.get("domain") in (domain, "mixed")):
+            for st in (f.get("steps") or []):
+                cid = st.get("evidence_chunk")
+                if cid:
+                    related_chunks.add(cid)
+
+    boundaries = domain_map.get("boundaries", {}) or {}
+    # 2)按domain相关chunk过滤边界列表
+    def _count(boundary_name: str) -> int:
+        xs = boundaries.get(boundary_name, []) or []
+        if not related_chunks:
+            return 0
+        return sum(1 for cid in xs if cid in related_chunks)
+
     return {
         "boundaries_summary": {
-            "controller_chunks": len(domain_map.get("boundaries", {}).get("controller", [])),
-            "service_chunks": len(domain_map.get("boundaries", {}).get("service", [])),
-            "mapper_chunks": len(domain_map.get("boundaries", {}).get("mapper", [])),
+            "controller_chunks": _count("controller"),
+            "service_chunks": _count("service"),
+            "mapper_chunks": _count("mapper"),
         },
         "top_entities": [e.get("name") for e in ents[:10] if e.get("name")],
         "top_operations": [o.get("name") for o in ops[:12] if o.get("name")],
@@ -1163,9 +1350,117 @@ def main():
         if not base_ref_chunks:
             continue
         
+        for v in range(max(1, variants_per_req)):
+            # 注意:rerank需要requirement,所以要在lang循环内部做
+            # 我们把ref_chunks的生成延后到lang循环里
+            for lang in langs:
+                if lang == "en":
+                    requirement = (r.get("requirement_en") or "").strip()
+                    context_en = (r.get("context_en") or "").strip()
+                    if not requirement:
+                        if strict_en >= 2:
+                            continue
+                        if strict_en == 1:
+                            zh_raw = (r.get("requirement_zh") or "").strip()
+                            if not zh_raw:
+                                continue
+                            requirement = f"Please design a solution for the following requirement(original in Chinese):\n{zh_raw}"
+                        else:
+                            requirement = (r.get("requirement_zh") or "").strip()
+                            if not requirement:
+                                continue
+                    if has_cjk(requirement) and strict_en >= 2:
+                        continue
+                else:
+                    requirement = (r.get("requirement_zh") or "").strip() or (r.get("requirement_en") or "").strip()
+                    context_en = ""
+
+                if not requirement:
+                    continue
+
+                # 先rerank(语义贴合),再shuffle(多样性)
+                reranked = rerank_reference_chunks_by_requirement(
+                    requirement=requirement,
+                    base_chunk_ids=base_ref_chunks,
+                    index_map=index_map,
+                    top_n=int(os.environ.get("DESIGN_RERANK_TOPN", "80")),
+                )
+                if not reranked:
+                    continue
+                ref_chunks = list(reranked)
+                random.shuffle(ref_chunks)
+
+                evidence_refs, evidence_snippets = build_evidence(ref_chunks, index_map, k=evidence_k, code_max_chars=code_max_chars)
+                if not evidence_snippets:
+                    continue
+
+                name_hints = extract_names_from_snippets(evidence_snippets)
+
+                strategies = pick_strategies(domain)
+                design_output = generate_design_output(requirement, domain, repo_context, name_hints, strategies, lang)
+
+                if "design" in templates_nlg and lang in templates_nlg["design"]:
+                    overview_prefix = templates_nlg["design"][lang].get("overview_prefix")
+                    if isinstance(overview_prefix, str) and overview_prefix:
+                        if lang == "en" and has_cjk(overview_prefix):
+                            pass
+                        else:
+                            design_output["architecture_overview"] = overview_prefix.format(domain=domain)
+
+                trace_steps = build_trace(domain, ref_chunks, design_output["strategy_ids"], lang)
+                text = build_training_text(requirement, design_output, evidence_snippets, trace_steps, lang, context_en=context_en)
+
+                meta_v2 = {
+                    "task_type": "design",
+                    "language": lang,
+                    "domain": domain,
+                    "difficulty": r.get("difficulty", "medium"),
+                    "requirement_id": rid,
+                    "requirement_source": {"type": r.get("source_type"), "id": r.get("source_id")},
+                    "repo_context": repo_context,
+                    "evidence": evidence_refs,
+                    "evidence_snippets": [{
+                        "chunk_id": e.get("chunk_id"),
+                        "file_path": e.get("file_path"),
+                        "start_line": e.get("start_line"),
+                        "end_line": e.get("end_line"),
+                        "code_lang": e.get("code_lang"),
+                        "code": e.get("code"),
+                    } for e in (evidence_snippets or [])],
+                    "trace_digest": trace_steps,
+                    "name_hints": name_hints,
+                    "strategy_ids": design_output.get("strategy_ids") or [],
+                    "generator": "step05_v8_en_clean_multi_variant_rerank",
+                    "variant_id": v,
+                    "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                    "source": "AutoCodeDataPipeline",
+                    "context_en": context_en,
+                    "rerank_topn": int(os.environ.get("DESIGN_RERANK_TOPN", "80")),
+                }
+
+                sample = {
+                    "sample_id": make_id("design", f"{rid}|{lang}|v{v}|{','.join(meta_v2['strategy_ids'])}|{sha1_text(text)[:8]}"),
+                    "task_type": "design",
+                    "language": lang,
+                    "requirement": requirement,
+                    "repo_context": repo_context,
+                    "design_output": design_output,
+                    "evidence": [{
+                        "chunk_id": e.get("chunk_id"),
+                        "file_path": e.get("file_path"),
+                        "start_line": e.get("start_line"),
+                        "end_line": e.get("end_line"),
+                        "code_lang": e.get("code_lang"),
+                        "code": e.get("code"),
+                    } for e in (evidence_snippets or [])[:evidence_k]],
+                    "trace": {"reasoning_steps": trace_steps},
+                    "text": text,
+                    "meta_v2": meta_v2,
+                }
+                samples.append(sample)
         # 生成variants_per_req个变体：每次shuffle ref_chunks
         # 为了多样性:每次变体打乱证据chunk顺序
-        for v in range(max(1, variants_per_req)):
+        '''for v in range(max(1, variants_per_req)):
             ref_chunks = list(base_ref_chunks)
             random.shuffle(ref_chunks)
 
@@ -1272,6 +1567,8 @@ def main():
                     "meta_v2": meta_v2,
                 }
                 samples.append(sample)
+            '''
+        
 
     random.shuffle(samples)  # 9)shuffle samples
     n_total = len(samples)
